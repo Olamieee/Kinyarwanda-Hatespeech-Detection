@@ -20,12 +20,13 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 #Mail Configuration
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_SERVER'] = 'smtp.sendgrid.net'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'alongeola16@gmail.com'
-app.config['MAIL_PASSWORD'] = os.getenv('GMAIL_SMTP_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = ('Lappy', 'alongeola16@gmail.com')
+app.config['MAIL_USERNAME'] = 'apikey' 
+app.config['MAIL_PASSWORD'] = os.getenv('SENDGRID_API_KEY')
+app.config['MAIL_DEFAULT_SENDER'] = ('RHD', 'longelee333@gmail.com')
+
 
 mail = Mail(app)
 
@@ -87,14 +88,41 @@ def generate_code(length=7):
 def send_verification_email(email, code):
     logging.debug(f"Preparing to send verification email to {email} with code {code}")
     try:
-        msg = Message("Verify your Account", recipients=[email])
-        msg.body = f"Welcome! Your verification code is: {code}"
+        msg = Message(
+            subject="Your RHD verification code",
+            recipients=[email]
+        )
+
+        # Plain text version
+        msg.body = f"""
+Hello,
+
+Thanks for signing up with RHD. Please use the verification code below to complete your registration:
+
+Verification Code: {code}
+
+If you didn’t request this, you can safely ignore this message.
+
+– The RHD Team
+"""
+
+        # HTML version
+        msg.html = f"""
+<p>Hello,</p>
+<p>Thanks for signing up with <strong>RHD</strong>.</p>
+<p>Please use the verification code below to complete your registration:</p>
+<h2 style="color:#2e6c80;">{code}</h2>
+<p>If you didn’t request this, you can safely ignore this message.</p>
+<p style="margin-top:20px;">– The RHD Team</p>
+"""
+
         mail.send(msg)
         logging.info(f"Verification email sent to {email}")
         return True
     except Exception as e:
         logging.error(f"Failed to send verification email: {e}")
         return False
+
 
 # Rate limiting
 user_last_requests = {}
@@ -179,6 +207,7 @@ def register():
         username = request.form['username']
         email = request.form['email']
         password = request.form['password']
+        role = request.form.get('role', 'user')
 
         if User.query.filter((User.username == username) | (User.email == email)).first():
             flash("Username or email already exists.", "danger")
@@ -186,8 +215,14 @@ def register():
 
         code = generate_code()
         hashed_pw = generate_password_hash(password)
-        user = User(full_name=full_name, username=username, email=email,
-                    password_hash=hashed_pw, verification_code=code)
+        user = User(
+            full_name=full_name,
+            username=username,
+            email=email,
+            password_hash=hashed_pw,
+            verification_code=code,
+            role=role
+        )
         db.session.add(user)
         db.session.commit()
 
@@ -200,6 +235,7 @@ def register():
 
         return redirect(url_for("verify", username=username))
     return render_template("register.html")
+
 
 @app.route('/verify/<username>', methods=['GET', 'POST'])
 def verify(username):
@@ -334,3 +370,4 @@ if __name__ == "__main__":
     with app.app_context():
         db.create_all()
     app.run(debug=True)
+

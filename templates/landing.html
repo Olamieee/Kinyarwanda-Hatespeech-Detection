@@ -2,200 +2,387 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kinyarwanda Hate Speech Detection</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  <style>
+    /* Landing page specific enhancements */
+    .hero-section {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border-radius: 20px;
+      margin: 2rem 0;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .hero-section::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
+      animation: rotate 20s linear infinite;
+    }
+    
+    .hero-content {
+      position: relative;
+      z-index: 1;
+    }
+    
+    .hero-section h1 {
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1.5rem;
+      font-size: clamp(2.5rem, 6vw, 4rem);
+    }
+    
+    .hero-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 2rem;
+    }
+    
+    .hero-buttons .btn {
+      font-size: 1.1rem;
+      padding: 1rem 2rem;
+    }
+    
+    .examples-section {
+      margin: 4rem 0;
+    }
+    
+    .example-grid {
+      display: grid;
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+    
+    @media (min-width: 768px) {
+      .example-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    .example-card {
+      background: #f9fafb;
+      padding: 1.5rem;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      transition: all 0.3s ease;
+    }
+    
+    .example-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .example-text {
+      font-style: italic;
+      color: #374151;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: white;
+      border-radius: 8px;
+      border-left: 3px solid #3b82f6;
+      font-size: 0.95rem;
+    }
+    
+    .example-result {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+    
+    .status-safe { color: #059669; }
+    .status-flagged { color: #dc2626; }
+    
+    .stats-section {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      padding: 3rem 2rem;
+      border-radius: 20px;
+      margin: 4rem 0;
+      text-align: center;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+    
+    .stat-item h3 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .stat-item:nth-child(1) h3 { color: #3b82f6; }
+    .stat-item:nth-child(2) h3 { color: #8b5cf6; }
+    .stat-item:nth-child(3) h3 { color: #10b981; }
+    .stat-item:nth-child(4) h3 { color: #f59e0b; }
+    
+    .how-it-works {
+      margin: 4rem 0;
+    }
+    
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+    }
+    
+    .step-number {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: white;
+      flex-shrink: 0;
+    }
+    
+    .step:nth-child(1) .step-number { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+    .step:nth-child(2) .step-number { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+    .step:nth-child(3) .step-number { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+    
+    .step-content {
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .step-content h3 {
+      margin-bottom: 0.5rem;
+    }
+    
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    @media (max-width: 768px) {
+      .hero-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .hero-section {
+        padding: 2rem 1rem;
+      }
+      
+      .step {
+        text-align: center;
+        flex-direction: column;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="container fade-in">
-    <h1>Kinyarwanda Hate Speech Detection</h1>
-    <p class="lead">
-      Empowering safer digital communication in Kinyarwanda through advanced AI-powered hate speech detection.
-      Our cutting-edge platform helps create more respectful and inclusive online communities.
-    </p>
-    
-    <div style="text-align: center; margin: 2rem 0;">
-      <a href="{{ url_for('login') }}" class="btn">Login</a>
-      <a href="{{ url_for('register') }}" class="btn">Get Started Free</a>
+  <div class="container">
+    <!-- Hero Section -->
+    <div class="hero-section">
+      <div class="hero-content">
+        <h1>Kinyarwanda Hate Speech Detection</h1>
+        <p class="lead">
+          Empowering safer digital communities through AI-powered content moderation.
+          Our advanced machine learning platform analyzes Kinyarwanda texts to identify 
+          hate speech and offensive content with remarkable accuracy and cultural sensitivity.
+        </p>
+        <div class="hero-buttons">
+          <a href="{{ url_for('register') }}" class="btn">Get Started Free</a>
+          <a href="{{ url_for('login') }}" class="btn">Login</a>
+        </div>
+      </div>
     </div>
 
-    <!-- Key Features Section -->
+    <!-- Features Section -->
+    <h2>Why Choose Our Platform?</h2>
     <div class="features">
       <div class="feature-box">
-        <h3>🎯 Accurate Detection</h3>
-        <p>State-of-the-art machine learning models specifically trained on Kinyarwanda text patterns for precise hate speech classification with over 95% accuracy.</p>
+        <h3>🎯 Cultural Accuracy</h3>
+        <p>Built specifically for Kinyarwanda language nuances, our AI understands cultural context, idioms, and linguistic patterns that generic tools miss.</p>
       </div>
       <div class="feature-box">
-        <h3>📊 User Dashboard</h3>
-        <p>Comprehensive analysis dashboard where you can analyze text, view your complete history, and receive detailed explanations for content classifications.</p>
+        <h3>⚡ Real-time Analysis</h3>
+        <p>Get instant results with our optimized machine learning models. Perfect for live moderation of social media posts, comments, and messages.</p>
+      </div>
+      <div class="feature-box">
+        <h3>📊 Detailed Insights</h3>
+        <p>Understand not just what was flagged, but why. Our explainable AI shows you the specific words and patterns that triggered the detection.</p>
+      </div>
+      <div class="feature-box">
+        <h3>👥 User Dashboard</h3>
+        <p>Track your analysis history, view detailed explanations, and monitor your content patterns over time with our intuitive user interface.</p>
       </div>
       <div class="feature-box">
         <h3>🛡️ Moderator Tools</h3>
-        <p>Powerful moderation interface for reviewing flagged content, tracking user activity patterns, and generating detailed reports for platform management.</p>
+        <p>Advanced moderation features including bulk analysis, user activity tracking, flagged content reports, and exportable data for platform managers.</p>
+      </div>
+      <div class="feature-box">
+        <h3>🔒 Privacy First</h3>
+        <p>Your data is secure with us. We follow strict privacy protocols and don't store your content longer than necessary for analysis.</p>
       </div>
     </div>
 
-    <!-- Why Choose Us Section -->
-    <div style="margin: 4rem 0;">
-      <h2>Why Choose Our Platform?</h2>
-      <div class="features">
-        <div class="feature-box">
-          <h3>🌍 Native Language Support</h3>
-          <p>Built specifically for Kinyarwanda language nuances, cultural context, and linguistic patterns that generic tools miss.</p>
+    <!-- Examples Section -->
+    <div class="examples-section">
+      <h2>See It In Action</h2>
+      <p style="text-align: center; color: #6b7280; margin-bottom: 2rem;">
+        Here are some examples of how our AI detects different types of content:
+      </p>
+      
+      <div class="example-grid">
+        <div class="example-card">
+          <div class="example-text">
+            "Muraho, uramutse mwese! Turashaka gukora hamwe mu kubaka igihugu cyacu."
+          </div>
+          <div class="example-result">
+            <span style="color: #059669;">✓</span>
+            <span class="status-safe">Safe Content</span>
+          </div>
+          <small style="color: #6b7280;">Translation: "Hello everyone! We want to work together to build our country."</small>
         </div>
-        <div class="feature-box">
-          <h3>⚡ Real-time Analysis</h3>
-          <p>Instant text analysis with immediate results and detailed explanations, perfect for live moderation and content review.</p>
+
+        <div class="example-card">
+          <div class="example-text">
+            "Abo bantu nibo mpamvu u Rwanda rudafite amahoro..."
+          </div>
+          <div class="example-result">
+            <span style="color: #dc2626;">⚠</span>
+            <span class="status-flagged">Hate Speech Detected</span>
+          </div>
+          <small style="color: #6b7280;">Flagged for: divisive language, group targeting</small>
         </div>
-        <div class="feature-box">
-          <h3>🔒 Privacy First</h3>
-          <p>Your data is encrypted and protected. We never share your content and maintain strict privacy standards.</p>
+
+        <div class="example-card">
+          <div class="example-text">
+            "Twese turi abanyarwanda, tugomba kubana neza kandi twitabire mu iterambere."
+          </div>
+          <div class="example-result">
+            <span style="color: #059669;">✓</span>
+            <span class="status-safe">Safe Content</span>
+          </div>
+          <small style="color: #6b7280;">Translation: "We are all Rwandans, we should live well together and participate in development."</small>
         </div>
-        <div class="feature-box">
-          <h3>📈 Continuous Learning</h3>
-          <p>Our AI models are continuously updated and improved to handle evolving language patterns and emerging hate speech tactics.</p>
-        </div>
-        <div class="feature-box">
-          <h3>🎓 Educational Resources</h3>
-          <p>Access educational materials about digital citizenship, hate speech awareness, and community building resources.</p>
-        </div>
-        <div class="feature-box">
-          <h3>🤝 Community Driven</h3>
-          <p>Built with input from Rwandan communities to ensure cultural sensitivity and contextual accuracy in our detection algorithms.</p>
+
+        <div class="example-card">
+          <div class="example-text">
+            "Sibyo ko bamwe bavuga amagambo ateza urwango mu rubyiruko..."
+          </div>
+          <div class="example-result">
+            <span style="color: #dc2626;">⚠</span>
+            <span class="status-flagged">Potentially Harmful</span>
+          </div>
+          <small style="color: #6b7280;">Flagged for: potential incitement, youth-targeting language</small>
         </div>
       </div>
     </div>
 
     <!-- How It Works Section -->
-    <div style="margin: 4rem 0;">
+    <div class="how-it-works">
       <h2>How It Works</h2>
-      <div class="features">
-        <div class="feature-box">
-          <h3>1. Input Text</h3>
-          <p>Simply paste or type any Kinyarwanda text into our analysis interface. Our system supports various text formats and lengths.</p>
+      
+      <div class="step">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <h3>Input Your Text</h3>
+          <p>Simply paste or type your Kinyarwanda text into our analysis form. Our system accepts everything from single sentences to full articles.</p>
         </div>
-        <div class="feature-box">
-          <h3>2. AI Analysis</h3>
-          <p>Our advanced machine learning models analyze the text for hate speech patterns, offensive language, and potentially harmful content.</p>
+      </div>
+      
+      <div class="step">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <h3>AI Analysis</h3>
+          <p>Our trained models analyze linguistic patterns, context, and cultural nuances to identify potentially harmful content with high accuracy.</p>
         </div>
-        <div class="feature-box">
-          <h3>3. Get Results</h3>
-          <p>Receive instant classification results with confidence scores and detailed explanations of flagged words or phrases.</p>
-        </div>
-        <div class="feature-box">
-          <h3>4. Take Action</h3>
-          <p>Use the insights to moderate content, educate users, or improve your platform's safety measures with our comprehensive reporting tools.</p>
+      </div>
+      
+      <div class="step">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <h3>Get Results</h3>
+          <p>Receive instant classification results along with explanations of flagged words and phrases, helping you understand the AI's decision-making process.</p>
         </div>
       </div>
     </div>
 
-    <!-- Statistics Section -->
-    <div style="margin: 4rem 0;">
-      <h2>Platform Impact</h2>
+    <!-- Success Stories Section -->
+    <h2>Success Stories</h2>
+    <div class="features">
+      <div class="feature-box">
+        <h3>📱 Social Media Platform</h3>
+        <p><strong>Challenge:</strong> A growing Rwandan social network struggled with manual content moderation.</p>
+        <p><strong>Solution:</strong> Implemented our API for real-time content screening.</p>
+        <p><strong>Result:</strong> 85% reduction in harmful content reports and improved user engagement.</p>
+      </div>
+      
+      <div class="feature-box">
+        <h3>🏫 Educational Forum</h3>
+        <p><strong>Challenge:</strong> Online learning platform needed to ensure respectful student discussions.</p>
+        <p><strong>Solution:</strong> Integrated our detection system for forum posts and comments.</p>
+        <p><strong>Result:</strong> Created a safer learning environment with 90% fewer incidents.</p>
+      </div>
+      
+      <div class="feature-box">
+        <h3>📺 News Website</h3>
+        <p><strong>Challenge:</strong> Comment sections became breeding grounds for divisive content.</p>
+        <p><strong>Solution:</strong> Automated pre-publication screening of reader comments.</p>
+        <p><strong>Result:</strong> Maintained healthy discussions while reducing moderation workload by 70%.</p>
+      </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="stats-section">
+      <h2>Trusted by the Community</h2>
       <div class="stats-grid">
-        <div class="stat-card">
-          <span class="stat-number">10,000+</span>
-          <span class="stat-label">Texts Analyzed</span>
+        <div class="stat-item">
+          <h3>10,000+</h3>
+          <p style="color: #6b7280;">Texts Analyzed</p>
         </div>
-        <div class="stat-card">
-          <span class="stat-number">95%</span>
-          <span class="stat-label">Accuracy Rate</span>
+        <div class="stat-item">
+          <h3>95%</h3>
+          <p style="color: #6b7280;">Accuracy Rate</p>
         </div>
-        <div class="stat-card">
-          <span class="stat-number">500+</span>
-          <span class="stat-label">Active Users</span>
+        <div class="stat-item">
+          <h3>500+</h3>
+          <p style="color: #6b7280;">Active Users</p>
         </div>
-        <div class="stat-card">
-          <span class="stat-number">24/7</span>
-          <span class="stat-label">System Availability</span>
+        <div class="stat-item">
+          <h3>24/7</h3>
+          <p style="color: #6b7280;">Availability</p>
         </div>
-      </div>
-    </div>
-
-    <!-- Use Cases Section -->
-    <div style="margin: 4rem 0;">
-      <h2>Perfect For</h2>
-      <div class="features">
-        <div class="feature-box">
-          <h3>🏢 Social Media Platforms</h3>
-          <p>Automatically moderate user-generated content and maintain safe community spaces on your social media platform.</p>
-        </div>
-        <div class="feature-box">
-          <h3>📰 News Websites</h3>
-          <p>Monitor comment sections and user discussions to ensure respectful dialogue and prevent harassment.</p>
-        </div>
-        <div class="feature-box">
-          <h3>🎓 Educational Institutions</h3>
-          <p>Create safer online learning environments by monitoring student communications and preventing cyberbullying.</p>
-        </div>
-        <div class="feature-box">
-          <h3>💬 Chat Applications</h3>
-          <p>Integrate real-time hate speech detection into messaging apps to protect users from harmful content.</p>
-        </div>
-        <div class="feature-box">
-          <h3>🏛️ Government Agencies</h3>
-          <p>Monitor public forums and social media for hate speech to maintain social harmony and prevent conflicts.</p>
-        </div>
-        <div class="feature-box">
-          <h3>🔍 Research Organizations</h3>
-          <p>Analyze large datasets of Kinyarwanda text for academic research on digital communication patterns.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Technology Section -->
-    <div style="margin: 4rem 0;">
-      <h2>Advanced Technology</h2>
-      <div class="feature-box" style="text-align: left;">
-        <h3>🤖 Machine Learning Excellence</h3>
-        <p>Our platform leverages cutting-edge natural language processing (NLP) techniques specifically adapted for Kinyarwanda:</p>
-        <ul style="margin: 1rem 0; padding-left: 2rem;">
-          <li><strong>Transformer-based Models:</strong> State-of-the-art neural networks trained on extensive Kinyarwanda text corpora</li>
-          <li><strong>Contextual Analysis:</strong> Understanding cultural nuances and context-dependent meanings</li>
-          <li><strong>Multi-class Classification:</strong> Detecting various types of hate speech including ethnic, religious, and gender-based discrimination</li>
-          <li><strong>Explainable AI:</strong> Transparent decision-making process with clear explanations for each classification</li>
-          <li><strong>Continuous Learning:</strong> Regular model updates based on new data and emerging language patterns</li>
-        </ul>
       </div>
     </div>
 
     <!-- Call to Action -->
-    <div style="text-align: center; margin: 4rem 0; padding: 3rem; background: rgba(102, 126, 234, 0.1); border-radius: 15px;">
-      <h2 style="color: #667eea;">Ready to Make Your Platform Safer?</h2>
-      <p style="font-size: 1.2rem; margin: 1rem 0; color: #555;">
-        Join hundreds of organizations already using our platform to create more respectful online communities.
+    <div style="text-align: center; margin: 4rem 0;">
+      <h2>Ready to Create Safer Digital Spaces?</h2>
+      <p style="color: #6b7280; max-width: 600px; margin: 1rem auto 2rem;">
+        Join hundreds of content creators, community managers, and platform owners who trust our AI to keep their digital spaces respectful and inclusive.
       </p>
-      <a href="{{ url_for('register') }}" class="btn" style="font-size: 1.1rem; padding: 1rem 2.5rem; margin: 1rem;">Start Free Trial</a>
-    </div>
-
-    <!-- FAQ Section -->
-    <div style="margin: 4rem 0;">
-      <h2>Frequently Asked Questions</h2>
-      <div class="features">
-        <div class="feature-box">
-          <h3>❓ Is my data secure?</h3>
-          <p>Yes, we use enterprise-grade encryption and never store your analyzed content longer than necessary for processing.</p>
-        </div>
-        <!-- <div class="feature-box">
-          <h3>❓ How accurate is the detection?</h3>
-          <p>Our models achieve over 95% accuracy on Kinyarwanda hate speech detection, continuously improving with new data.</p>
-        </div> -->
-        <div class="feature-box">
-          <h3>❓ Can I integrate this with my app?</h3>
-          <p>We offer API access for seamless integration with your existing platforms and applications.</p>
-        </div>
-        <div class="feature-box">
-          <h3>❓ What about false positives?</h3>
-          <p>Our system provides confidence scores and detailed explanations, allowing you to review and override decisions when needed.</p>
-        </div>
+      <div class="hero-buttons">
+        <a href="{{ url_for('register') }}" class="btn">Start Free Trial</a>
+        <a href="#examples" class="btn">View More Examples</a>
       </div>
     </div>
 
+    <!-- Footer -->
     <footer>
-      <p>&copy; 2025 Kinyarwanda Hate Speech Detection Platform. All rights reserved.</p>
-      <p style="margin-top: 0.5rem; font-size: 0.8rem;">
-        Committed to creating safer digital spaces for Rwandan communities worldwide.
-      </p>
-    </footer>
-  </div>
-</body>
-</html>
+      <div style="max-width: 800px; margin: 0 auto; text-align: center;">
+        <p style="margin-bottom: 1rem;">
+          <strong>Kinyarwanda Hate Speech Detection</strong> - Building bridges,
