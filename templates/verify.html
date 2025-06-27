@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +11,7 @@
       padding: 0;
       box-sizing: border-box;
     }
-    
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       line-height: 1.6;
@@ -22,7 +23,7 @@
       justify-content: center;
       padding: 1rem;
     }
-    
+
     .verify-container {
       background: white;
       padding: 2rem;
@@ -33,11 +34,11 @@
       border: 1px solid #e5e7eb;
       text-align: center;
     }
-    
+
     .verify-header {
       margin-bottom: 2rem;
     }
-    
+
     .verify-icon {
       width: 80px;
       height: 80px;
@@ -49,7 +50,7 @@
       margin: 0 auto 1rem;
       font-size: 2rem;
     }
-    
+
     .verify-header h2 {
       background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #8b5cf6 100%);
       -webkit-background-clip: text;
@@ -59,13 +60,13 @@
       font-weight: 800;
       margin-bottom: 0.5rem;
     }
-    
+
     .verify-header p {
       color: #6b7280;
       font-size: 0.9rem;
       line-height: 1.5;
     }
-    
+
     .flash {
       padding: 1rem;
       border-radius: 8px;
@@ -73,32 +74,32 @@
       font-size: 0.9rem;
       text-align: left;
     }
-    
+
     .flash.error {
       background: #fef2f2;
       color: #dc2626;
       border: 1px solid #fecaca;
     }
-    
+
     .flash.success {
       background: #f0fdf4;
       color: #059669;
       border: 1px solid #bbf7d0;
     }
-    
+
     .flash.info {
       background: #eff6ff;
       color: #2563eb;
       border: 1px solid #bfdbfe;
     }
-    
+
     form {
       display: flex;
       flex-direction: column;
       gap: 1rem;
       margin-bottom: 1.5rem;
     }
-    
+
     label {
       font-weight: 600;
       color: #374151;
@@ -106,7 +107,7 @@
       margin-bottom: 0.25rem;
       text-align: left;
     }
-    
+
     input[type="text"] {
       width: 100%;
       padding: 0.875rem;
@@ -119,14 +120,14 @@
       letter-spacing: 0.5rem;
       font-family: 'Courier New', monospace;
     }
-    
+
     input[type="text"]:focus {
       outline: none;
       border-color: #3b82f6;
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
       background: white;
     }
-    
+
     .btn {
       padding: 0.875rem 1.5rem;
       border: none;
@@ -139,56 +140,56 @@
       display: inline-block;
       text-align: center;
     }
-    
+
     .btn-primary {
       background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
       color: white;
     }
-    
+
     .btn-primary:hover:not(:disabled) {
       transform: translateY(-1px);
       box-shadow: 0 6px 12px -2px rgba(59, 130, 246, 0.3);
     }
-    
+
     .btn-secondary {
       background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
       color: white;
     }
-    
+
     .btn-secondary:hover:not(:disabled) {
       transform: translateY(-1px);
       box-shadow: 0 6px 12px -2px rgba(139, 92, 246, 0.3);
     }
-    
+
     .btn:disabled {
       background: #9ca3af;
       cursor: not-allowed;
       transform: none;
       box-shadow: none;
     }
-    
+
     .resend-section {
       padding-top: 1.5rem;
       border-top: 1px solid #e5e7eb;
     }
-    
+
     .help-text {
       color: #6b7280;
       font-size: 0.85rem;
       margin-top: 1rem;
       line-height: 1.5;
     }
-    
+
     @media (max-width: 480px) {
       .verify-container {
         padding: 1.5rem;
         border-radius: 12px;
       }
-      
+
       .verify-header h2 {
         font-size: 1.75rem;
       }
-      
+
       .verify-icon {
         width: 60px;
         height: 60px;
@@ -217,11 +218,12 @@
 
     window.onload = () => {
       {% if not can_resend %}
-        startCooldown(60);
+      startCooldown(60);
       {% endif %}
     };
   </script>
 </head>
+
 <body>
   <div class="verify-container">
     <div class="verify-header">
@@ -231,15 +233,15 @@
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
-      {% for category, message in messages %}
-        <div class="flash {{ category }}">{{ message }}</div>
-      {% endfor %}
+    {% for category, message in messages %}
+    <div class="flash {{ category }}">{{ message }}</div>
+    {% endfor %}
     {% endwith %}
 
     <form method="POST">
       <div>
         <label>Verification Code</label>
-        <input type="text" name="code" placeholder="Enter 6-digit code" maxlength="6" required />
+        <input type="text" name="code" placeholder="Enter 7-digit code" maxlength="7" required />
       </div>
       <button type="submit" class="btn btn-primary">Verify Account</button>
     </form>
@@ -247,11 +249,13 @@
     <div class="resend-section">
       <p class="help-text">Didn't receive the code? Check your spam folder or request a new one.</p>
       <form method="POST" style="margin-top: 1rem;">
-        <button id="resend-btn" name="resend" value="true" type="submit" class="btn btn-secondary" {% if not can_resend %}disabled{% endif %}>
+        <button id="resend-btn" name="resend" value="true" type="submit" class="btn btn-secondary" {% if not can_resend
+          %}disabled{% endif %}>
           Resend Code
         </button>
       </form>
     </div>
   </div>
 </body>
+
 </html>
