@@ -477,3 +477,75 @@
           <div class="stat-label">Flagged Rate</div>
         </div>
       </div>
+          <!-- Detailed Stats -->
+    <div class="detailed-stats">
+      <div class="detail-card">
+        <h3>📊 Flagged by Label</h3>
+        <ul class="detail-list">
+          {% for label, count in stats.counts_by_label.items() %}
+          <li>
+            <span>{{ label }}</span>
+            <span class="detail-value">{{ count }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="detail-card">
+        <h3>👥 Top 5 Users</h3>
+        <ul class="detail-list">
+          {% for user_id, count in stats.top_users %}
+          <li>
+            <span>User ID {{ user_id }}</span>
+            <span class="detail-value">{{ count }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="detail-card">
+        <h3>💬 Top Flagged Words</h3>
+        <ul class="detail-list">
+          {% for word, freq in stats.top_words %}
+          <li>
+            <span>{{ word }}</span>
+            <span class="detail-value">{{ freq }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- Flagged Content Section -->
+    <div class="flagged-section">
+      <div class="flagged-header">
+        <h2>⚠️ Flagged Content</h2>
+      </div>
+      <div class="flagged-content">
+        {% if flagged %}
+          {% for item in flagged %}
+          <div class="flagged-item">
+            <div class="flagged-meta">
+              <span class="user-id">User ID {{ item.user_id }}</span>
+              <span class="timestamp">{{ item.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+            </div>
+            <div class="flagged-text">{{ item.tweet_text }}</div>
+            <div class="flagged-details">
+              <span class="label-badge">{{ item.predicted_label }}</span>
+              {% if item.explanation_words %}
+              <span class="explanation">Explanation: {{ item.explanation_words }}</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="no-flagged">
+            <h3>✅ No flagged content found!</h3>
+            <p>All content is safe and within guidelines.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>
