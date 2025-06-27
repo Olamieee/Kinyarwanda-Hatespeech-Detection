@@ -1,59 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Moderator Dashboard</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moderator Dashboard - Kinyarwanda Hate Speech Detection</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
   <div class="container">
-    <h2>Moderator Dashboard</h2>
-    <a href="{{ url_for('logout') }}" class="btn">Logout</a>
-    <a href="{{ url_for('export_flagged') }}" class="btn export-btn">Export Flagged Content CSV</a>
+    <div class="top-nav">
+      <h2>Moderator Dashboard</h2>
+      <div class="nav-buttons">
+        <a href="{{ url_for('export_flagged') }}" class="btn export-btn">Export CSV</a>
+        <a href="{{ url_for('logout') }}" class="btn">Logout</a>
+      </div>
+    </div>
 
-    <h3>Moderator Stats</h3>
-    <ul>
-      <li><strong>Total Registered Users:</strong> {{ stats.total_users }}</li>
-      <li><strong>Total Flagged Content:</strong> {{ stats.total_flagged }}</li>
-      <li><strong>Flagged by Label:</strong>
-        <ul>
-          {% for label, count in stats.counts_by_label.items() %}
-            <li>{{ label }}: {{ count }}</li>
-          {% endfor %}
-        </ul>
-      </li>
-      <li><strong>Top 5 Users with Most Flagged Content:</strong>
-        <ul>
-          {% for user_id, count in stats.top_users %}
-            <li>User ID {{ user_id }}: {{ count }} flagged items</li>
-          {% endfor %}
-        </ul>
-      </li>
-      <li><strong>Top 5 Most Common Flagged Words:</strong>
-        <ul>
-          {% for word, freq in stats.top_words %}
-            <li>{{ word }} ({{ freq }})</li>
-          {% endfor %}
-        </ul>
-      </li>
-      <li><strong>Flagged Content in Last 7 Days:</strong> {{ stats.flagged_week }}</li>
-      <li><strong>Average Flagged Content Per User:</strong> {{ stats.avg_flagged_per_user | round(2) }}</li>
-      <li><strong>Flagged Content Percentage of Total Analyses:</strong> {{ stats.flagged_percentage | round(2) }}%</li>
-    </ul>
+    <div class="dashboard-intro">
+      <div class="dashboard-intro-content">
+        <h2>Content Moderation Center</h2>
+        <p>
+          Monitor and manage content across the platform. Track flagged content, analyze user behavior patterns, 
+          and maintain a safe digital environment for all users with comprehensive analytics and reporting tools.
+        </p>
+      </div>
+    </div>
 
-    <h3>Flagged Content</h3>
-    <ul>
-      {% for item in flagged %}
-        <li>
-          <strong>User ID {{ item.user_id }}</strong>: {{ item.tweet_text }} <br />
-          Label: {{ item.predicted_label }}<br />
-          {% if item.explanation_words %}
-          Explanation: {{ item.explanation_words }}<br />
-          {% endif %}
-          Timestamp: {{ item.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
-        </li>
-      {% endfor %}
-    </ul>
+    <!-- Quick Stats Overview -->
+    <div class="stats-grid">
+      <div class="stat-item">
+        <h3>{{ stats.total_users }}</h3>
+        <p>Total Users</p>
+      </div>
+      <div class="stat-item">
+        <h3>{{ stats.total_flagged }}</h3>
+        <p>Flagged Content</p>
+      </div>
+      <div class="stat-item">
+        <h3>{{ stats.flagged_week }}</h3>
+        <p>This Week</p>
+      </div>
+      <div class="stat-item">
+        <h3>{{ stats.flagged_percentage | round(1) }}%</h3>
+        <p>Flag Rate</p>
+      </div>
+    </div>
+
+    <!-- Detailed Statistics -->
+    <div class="moderator-stats">
+      <h3>📊 Detailed Analytics</h3>
+      <ul>
+        <li><strong>Average Flagged Content Per User:</strong> {{ stats.avg_flagged_per_user | round(2) }}</li>
+        <li><strong>Flagged Content Percentage of Total Analyses:</strong> {{ stats.flagged_percentage | round(2) }}%</li>
+      </ul>
+
+      <h3>🏷️ Content by Classification</h3>
+      <ul>
+        {% for label, count in stats.counts_by_label.items() %}
+          <li><strong>{{ label|title }}:</strong> {{ count }} items</li>
+        {% endfor %}
+      </ul>
+
+      <h3>👥 Top Users with Flagged Content</h3>
+      <ul>
+        {% for user_id, count in stats.top_users %}
+          <li><strong>User ID {{ user_id }}:</strong> {{ count }} flagged items</li>
+        {% endfor %}
+      </ul>
+
+      <h3>🔍 Most Common Flagged Terms</h3>
+      <ul>
+        {% for word, freq in stats.top_words %}
+          <li><strong>"{{ word }}"</strong> - appeared {{ freq }} times</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- Flagged Content List -->
+    <div class="flagged-content">
+      <h3>🚨 Recent Flagged Content</h3>
+      {% if flagged %}
+        <ul>
+          {% for item in flagged %}
+            <li>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                <strong>User ID: {{ item.user_id }}</strong>
+                <small style="color: #6b7280;">{{ item.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+              </div>
+              
+              <div style="background: white; padding: 1rem; border-radius: 8px; margin: 0.5rem 0; border-left: 3px solid #dc2626;">
+                <p style="font-style: italic; margin-bottom: 0.5rem;">"{{ item.tweet_text }}"</p>
+              </div>
+              
+              <div style="display: flex; gap: 1rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                <span style="background: #dc2626; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
+                  {{ item.predicted_label|upper }}
+                </span>
+                {% if item.explanation_words %}
+                  <span style="background: #f59e0b; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
+                    Key words: {{ item.explanation_words }}
+                  </span>
+                {% endif %}
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div style="text-align: center; padding: 3rem; color: #6b7280;">
+          <p>🎉 No flagged content found! The community is behaving well.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Action Center -->
+    <div class="dashboard-intro" style="margin-top: 3rem;">
+      <div class="dashboard-intro-content">
+        <h2>Quick Actions</h2>
+        <p>Export flagged content data for further analysis or reporting to administrators.</p>
+        <div style="margin-top: 1.5rem;">
+          <a href="{{ url_for('export_flagged') }}" class="btn export-btn">Download Full Report (CSV)</a>
+        </div>
+      </div>
+    </div>
   </div>
 </body>
 </html>
