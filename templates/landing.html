@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kinyarwanda Hate Speech Detection</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      margin: 0; padding: 0;
+      color: #333;
+    }
+    .container {
+      max-width: 900px;
+      margin: 3rem auto;
+      background: white;
+      padding: 2rem 3rem;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2.8rem;
+      margin-bottom: 0.5rem;
+      color: #2c3e50;
+    }
+    p.lead {
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+      color: #555;
+    }
+    .btn {
+      display: inline-block;
+      margin: 0 1rem;
+      padding: 0.75rem 2rem;
+      font-size: 1.1rem;
+      color: white;
+      background: #3498db;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.3s ease;
+    }
+    .btn:hover {
+      background: #2980b9;
+    }
+    .features {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 3rem;
+      flex-wrap: wrap;
+    }
+    .feature-box {
+      flex: 1 1 250px;
+      background: #ecf0f1;
+      margin: 1rem;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+      text-align: left;
+    }
+    .feature-box h3 {
+      margin-top: 0;
+      color: #34495e;
+    }
+    footer {
+      margin-top: 4rem;
+      font-size: 0.9rem;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Welcome to Kinyarwanda Hate Speech Detection</h1>
+    <p class="lead">
+      Our AI-powered platform analyzes Kinyarwanda texts to identify hate speech and offensive content quickly and accurately.
+      Join our community to help make social media safer and more respectful.
+    </p>
+    <a href="{{ url_for('login') }}" class="btn">Login</a>
+    <a href="{{ url_for('register') }}" class="btn">Register</a>
+
+    <div class="features">
+      <div class="feature-box">
+        <h3>Accurate Detection</h3>
+        <p>State-of-the-art machine learning models trained on Kinyarwanda text for precise hate speech classification.</p>
+      </div>
+      <div class="feature-box">
+        <h3>User Dashboard</h3>
+        <p>Analyze your text, view your analysis history, and receive explanations of why content is flagged.</p>
+      </div>
+      <div class="feature-box">
+        <h3>Moderator Tools</h3>
+        <p>Moderators can review flagged content, track user activity, and export reports for better platform management.</p>
+      </div>
+    </div>
+
+    <footer>
+      &copy; 2025 Kinyarwanda Hate Speech Detection. All rights reserved.
+    </footer>
+  </div>
+</body>
+</html>

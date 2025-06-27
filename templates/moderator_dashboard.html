@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Moderator Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+<body>
+  <div class="container">
+    <h2>Moderator Dashboard</h2>
+    <a href="{{ url_for('logout') }}" class="btn">Logout</a>
+    <a href="{{ url_for('export_flagged') }}" class="btn export-btn">Export Flagged Content CSV</a>
+
+    <h3>Moderator Stats</h3>
+    <ul>
+      <li><strong>Total Registered Users:</strong> {{ stats.total_users }}</li>
+      <li><strong>Total Flagged Content:</strong> {{ stats.total_flagged }}</li>
+      <li><strong>Flagged by Label:</strong>
+        <ul>
+          {% for label, count in stats.counts_by_label.items() %}
+            <li>{{ label }}: {{ count }}</li>
+          {% endfor %}
+        </ul>
+      </li>
+      <li><strong>Top 5 Users with Most Flagged Content:</strong>
+        <ul>
+          {% for user_id, count in stats.top_users %}
+            <li>User ID {{ user_id }}: {{ count }} flagged items</li>
+          {% endfor %}
+        </ul>
+      </li>
+      <li><strong>Top 5 Most Common Flagged Words:</strong>
+        <ul>
+          {% for word, freq in stats.top_words %}
+            <li>{{ word }} ({{ freq }})</li>
+          {% endfor %}
+        </ul>
+      </li>
+      <li><strong>Flagged Content in Last 7 Days:</strong> {{ stats.flagged_week }}</li>
+      <li><strong>Average Flagged Content Per User:</strong> {{ stats.avg_flagged_per_user | round(2) }}</li>
+      <li><strong>Flagged Content Percentage of Total Analyses:</strong> {{ stats.flagged_percentage | round(2) }}%</li>
+    </ul>
+
+    <h3>Flagged Content</h3>
+    <ul>
+      {% for item in flagged %}
+        <li>
+          <strong>User ID {{ item.user_id }}</strong>: {{ item.tweet_text }} <br />
+          Label: {{ item.predicted_label }}<br />
+          {% if item.explanation_words %}
+          Explanation: {{ item.explanation_words }}<br />
+          {% endif %}
+          Timestamp: {{ item.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</body>
+</html>

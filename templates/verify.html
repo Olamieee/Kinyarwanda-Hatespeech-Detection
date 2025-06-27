@@ -1,9 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Verify Your Account</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  <script>
+    let cooldown = 0;
+
+    function startCooldown(seconds) {
+      cooldown = seconds;
+      const btn = document.getElementById('resend-btn');
+      btn.disabled = true;
+      const interval = setInterval(() => {
+        if (cooldown <= 0) {
+          btn.disabled = false;
+          btn.innerText = 'Resend Code';
+          clearInterval(interval);
+        } else {
+          btn.innerText = 'Resend Code (' + cooldown + 's)';
+          cooldown--;
+        }
+      }, 1000);
+    }
+
+    window.onload = () => {
+      {% if not can_resend %}
+        startCooldown(60);
+      {% endif %}
+    };
+  </script>
 </head>
 <body>
   <h2>Email Verification</h2>
@@ -18,9 +43,15 @@
     <p>A verification code was sent to your email.</p>
 
     <label>Enter Code:</label>
-    <input type="text" name="code" required>
+    <input type="text" name="code" required />
 
     <button type="submit">Verify</button>
+  </form>
+
+  <form method="POST" style="margin-top: 20px;">
+    <button id="resend-btn" name="resend" value="true" type="submit" {% if not can_resend %}disabled{% endif %}>
+      Resend Code
+    </button>
   </form>
 </body>
 </html>
