@@ -300,16 +300,22 @@ def dashboard():
     result, explanation_words, raw_text = None, [], ""
 
     if request.method == 'POST':
-        raw_text = request.form['tweet']
+        print(request.form)  # Debug
+        raw_text = request.form.get('tweet', '').strip()
+        if not raw_text:
+            flash("Please enter text to analyze.", "warning")
+            return redirect(url_for('dashboard'))
+
         cleaned = preprocess_text(raw_text)
         vec = vectorizer.transform([cleaned])
         pred = model.predict(vec)[0]
+
+        # Should output 0, 1, or 2
         label = label_encoder.inverse_transform([pred])[0]
 
-        # Explanation (top 5 influential words)
+        # Explanation
         feature_names = vectorizer.get_feature_names_out()
-        class_index = int(pred)
-        coefs = model.coef_[class_index]
+        coefs = model.coef_[pred]  # Use int directly
         word_weights = vec.toarray()[0] * coefs
         top_indices = np.argsort(word_weights)[::-1][:5]
         explanation_words = [feature_names[i] for i in top_indices if vec.toarray()[0][i] > 0]

@@ -381,12 +381,12 @@
           <div class="form-group">
             <label for="text" class="form-label">Text to Analyze</label>
             <textarea 
-              name="text" 
+              name="tweet" 
               id="text" 
               class="form-textarea" 
               placeholder="Andika umwandiko wawe muri Kinyarwanda hano... (Write your Kinyarwanda text here...)"
               required
-            >{{ text if text else '' }}</textarea>
+            >{{ tweet }}</textarea>
           </div>
           <button type="submit" class="analyze-btn" id="analyzeBtn">
             <span id="btnText">Analyze Text</span>
@@ -396,15 +396,18 @@
 
         {% if result %}
         <div class="result-section">
-          <h3 class="result-title">Analysis Results</h3>
-          <div class="prediction-result {{ 'prediction-safe' if result == 'non-hate' else 'prediction-flagged' }}">
-            <span>{{ '✅' if result == 'non-hate' else '⚠️' }}</span>
+          <h3>Analysis Result</h3>
+          <div class="prediction-result 
+            {% if result == 'normal' %}prediction-safe{% else %}prediction-flagged{% endif %}">
             <span>
-              Prediction: 
-              {% if result == 'non-hate' %}
-                Safe Content
+              {% if result == 'normal' %}
+                ✅ Safe Content
+              {% elif result == 'offensive' %}
+                ⚠️ Offensive Content
+              {% elif result == 'hate' %}
+                🚫 Hate Speech Detected
               {% else %}
-                {{ result|title }}
+                ⚠️ {{ result|title }}
               {% endif %}
             </span>
           </div>
@@ -434,13 +437,18 @@
                 "{{ item.tweet_text }}"
               </div>
               <div class="history-result">
-                <span class="history-label {{ 'label-safe' if item.predicted_label == 'non-hate' else 'label-flagged' }}">
-                  {% if item.predicted_label == 'non-hate' %}
+                <span class="history-label {{ 'label-safe' if item.predicted_label == 'normal' else 'label-flagged' }}">
+                  {% if item.predicted_label == 'normal' %}
                     ✅ Safe Content
+                  {% elif item.predicted_label == 'offensive' %}
+                    ⚠️ Offensive Content
+                  {% elif item.predicted_label == 'hate' %}
+                    🚫 Hate Speech Detected
                   {% else %}
                     ⚠️ {{ item.predicted_label|title }}
                   {% endif %}
                 </span>
+                
               </div>
               {% if item.explanation_words %}
               <div class="history-explanation">
