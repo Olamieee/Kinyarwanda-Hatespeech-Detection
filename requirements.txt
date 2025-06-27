@@ -1,0 +1,10 @@
+Flask
+gunicorn
+flask_sqlalchemy
+flask_login
+flask_mail
+werkzeug
+joblib
+numpy
+sqlalchemy
+dotenv
