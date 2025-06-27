@@ -303,21 +303,24 @@ import joblib, re, random, string, time
 import numpy as np
 from sqlalchemy import func
 import logging
+from dotenv import load_dotenv
+import os
 
 app = Flask(__name__)
 app.secret_key = "replace_with_a_secret_key"
+load_dotenv()
 
 # Setup logging for debug
 logging.basicConfig(level=logging.DEBUG)
 
-# Mail config
+
+#Mail Configuration
 app.config['MAIL_SERVER'] = 'smtp-relay.brevo.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = 'alongeola16@gmail.com'
-app.config['MAIL_PASSWORD'] = '***REMOVED***'
+app.config['MAIL_PASSWORD'] = os.getenv('SENDINBLUE_SMTP_PASSWORD')  # <-- from env
 app.config['MAIL_DEFAULT_SENDER'] = ('Lappy', 'alongeola16@gmail.com')
-mail = Mail(app)
 
 # Database config
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
