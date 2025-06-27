@@ -198,7 +198,7 @@ def get_moderator_stats():
 def home():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard' if current_user.role == 'user' else 'moderator_dashboard'))
-    return render_template('landing.html')
+    return render_template('index.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
