@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h2>Welcome, {{ current_user.full_name }}!</h2>
+    <a href="{{ url_for('logout') }}" class="btn">Logout</a>
+
+    <form method="POST">
+      <textarea name="tweet" placeholder="Enter tweet..." required>{{ text }}</textarea>
+      <button type="submit">Analyze</button>
+    </form>
+
+    {% if result %}
+      <p class="result">Prediction: <strong>{{ result }}</strong></p>
+      {% if explanation %}
+        <p><strong>Top Words:</strong> {{ explanation|join(', ') }}</p>
+      {% endif %}
+    {% endif %}
+
+    <h3>Analysis History</h3>
+    <ul>
+      {% for item in history %}
+        <li><strong>{{ item.tweet_text }}</strong> → {{ item.predicted_label }}
+        {% if item.explanation_words %}
+          <br><small>Explanation: {{ item.explanation_words }}</small>
+        {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</body>
+</html>
