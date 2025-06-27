@@ -8,4 +8,4 @@ joblib
 numpy
 sqlalchemy
 dotenv
-scikit learn
+scikit-learn
