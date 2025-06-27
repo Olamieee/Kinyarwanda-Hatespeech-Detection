@@ -4,17 +4,55 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kinyarwanda Hate Speech Detection</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
   <style>
-    /* Landing page specific enhancements */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      background: #ffffff;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+    
+    /* Mobile-first responsive design */
+    @media (min-width: 640px) {
+      .container {
+        padding: 0 2rem;
+      }
+    }
+    
+    /* Hero Section - Mobile Optimized */
     .hero-section {
       text-align: center;
-      padding: 4rem 2rem;
+      padding: 2rem 1rem 3rem;
       background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-      border-radius: 20px;
-      margin: 2rem 0;
+      border-radius: 16px;
+      margin: 1rem 0 2rem;
       position: relative;
       overflow: hidden;
+      min-height: 70vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    @media (min-width: 640px) {
+      .hero-section {
+        padding: 4rem 2rem;
+        border-radius: 20px;
+        margin: 2rem 0;
+        min-height: 60vh;
+      }
     }
     
     .hero-section::before {
@@ -31,6 +69,7 @@
     .hero-content {
       position: relative;
       z-index: 1;
+      max-width: 800px;
     }
     
     .hero-section h1 {
@@ -38,25 +77,157 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      margin-bottom: 1.5rem;
-      font-size: clamp(2.5rem, 6vw, 4rem);
+      margin-bottom: 1rem;
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    
+    @media (min-width: 640px) {
+      .hero-section h1 {
+        font-size: 2.5rem;
+        margin-bottom: 1.5rem;
+      }
+    }
+    
+    @media (min-width: 768px) {
+      .hero-section h1 {
+        font-size: 3.5rem;
+      }
+    }
+    
+    .lead {
+      font-size: 1rem;
+      color: #6b7280;
+      margin-bottom: 2rem;
+      line-height: 1.7;
+    }
+    
+    @media (min-width: 640px) {
+      .lead {
+        font-size: 1.125rem;
+      }
+    }
+    
+    @media (min-width: 768px) {
+      .lead {
+        font-size: 1.25rem;
+      }
     }
     
     .hero-buttons {
       display: flex;
+      flex-direction: column;
       gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
+      align-items: center;
       margin-top: 2rem;
     }
     
-    .hero-buttons .btn {
-      font-size: 1.1rem;
-      padding: 1rem 2rem;
+    @media (min-width: 640px) {
+      .hero-buttons {
+        flex-direction: row;
+        justify-content: center;
+        gap: 1.5rem;
+      }
     }
     
+    .btn {
+      display: inline-block;
+      padding: 1rem 2rem;
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 200px;
+      text-align: center;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn:nth-child(2) {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    }
+    
+    @media (min-width: 640px) {
+      .btn {
+        width: auto;
+        min-width: 150px;
+      }
+    }
+    
+    /* Section Headers */
+    h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      text-align: center;
+      margin: 3rem 0 2rem;
+      color: #1f2937;
+    }
+    
+    @media (min-width: 640px) {
+      h2 {
+        font-size: 2.25rem;
+        margin: 4rem 0 2rem;
+      }
+    }
+    
+    /* Features Grid - Mobile Optimized */
+    .features {
+      display: grid;
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+    
+    @media (min-width: 640px) {
+      .features {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2rem;
+      }
+    }
+    
+    @media (min-width: 1024px) {
+      .features {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    
+    .feature-box {
+      background: #f9fafb;
+      padding: 1.5rem;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      transition: all 0.3s ease;
+    }
+    
+    .feature-box:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      border-color: #3b82f6;
+    }
+    
+    .feature-box h3 {
+      font-size: 1.125rem;
+      margin-bottom: 0.75rem;
+      color: #1f2937;
+    }
+    
+    .feature-box p {
+      color: #6b7280;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    
+    /* Examples Section - Mobile Optimized */
     .examples-section {
-      margin: 4rem 0;
+      margin: 3rem 0;
     }
     
     .example-grid {
@@ -68,12 +239,13 @@
     @media (min-width: 768px) {
       .example-grid {
         grid-template-columns: repeat(2, 1fr);
+        gap: 2rem;
       }
     }
     
     .example-card {
       background: #f9fafb;
-      padding: 1.5rem;
+      padding: 1.25rem;
       border-radius: 12px;
       border: 1px solid #e5e7eb;
       transition: all 0.3s ease;
@@ -81,7 +253,7 @@
     
     .example-card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 8px 12px -2px rgba(0, 0, 0, 0.1);
     }
     
     .example-text {
@@ -92,38 +264,75 @@
       background: white;
       border-radius: 8px;
       border-left: 3px solid #3b82f6;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
+      line-height: 1.5;
     }
     
     .example-result {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      font-weight: 500;
+      font-weight: 600;
       margin-bottom: 0.5rem;
+      font-size: 0.9rem;
     }
     
     .status-safe { color: #059669; }
     .status-flagged { color: #dc2626; }
     
+    .example-card small {
+      color: #6b7280;
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+    
+    /* Stats Section - Mobile Optimized */
     .stats-section {
       background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-      padding: 3rem 2rem;
-      border-radius: 20px;
-      margin: 4rem 0;
+      padding: 2rem 1rem;
+      border-radius: 16px;
+      margin: 3rem 0;
       text-align: center;
+    }
+    
+    @media (min-width: 640px) {
+      .stats-section {
+        padding: 3rem 2rem;
+        border-radius: 20px;
+        margin: 4rem 0;
+      }
     }
     
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 2rem;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
       margin-top: 2rem;
     }
     
+    @media (min-width: 640px) {
+      .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 2rem;
+      }
+    }
+    
     .stat-item h3 {
-      font-size: 2.5rem;
+      font-size: 2rem;
       margin-bottom: 0.5rem;
+      font-weight: 800;
+    }
+    
+    @media (min-width: 640px) {
+      .stat-item h3 {
+        font-size: 2.5rem;
+      }
+    }
+    
+    .stat-item p {
+      color: #6b7280;
+      font-size: 0.9rem;
+      font-weight: 500;
     }
     
     .stat-item:nth-child(1) h3 { color: #3b82f6; }
@@ -131,29 +340,48 @@
     .stat-item:nth-child(3) h3 { color: #10b981; }
     .stat-item:nth-child(4) h3 { color: #f59e0b; }
     
+    /* How It Works - Mobile Optimized */
     .how-it-works {
-      margin: 4rem 0;
+      margin: 3rem 0;
     }
     
     .step {
       display: flex;
-      align-items: center;
-      gap: 2rem;
+      align-items: flex-start;
+      gap: 1rem;
       margin: 2rem 0;
-      flex-wrap: wrap;
+      padding: 1rem;
+      background: #f9fafb;
+      border-radius: 12px;
+    }
+    
+    @media (min-width: 640px) {
+      .step {
+        align-items: center;
+        gap: 2rem;
+        padding: 1.5rem;
+      }
     }
     
     .step-number {
-      width: 60px;
-      height: 60px;
+      width: 50px;
+      height: 50px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       font-weight: bold;
       color: white;
       flex-shrink: 0;
+    }
+    
+    @media (min-width: 640px) {
+      .step-number {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+      }
     }
     
     .step:nth-child(1) .step-number { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
@@ -162,31 +390,71 @@
     
     .step-content {
       flex: 1;
-      min-width: 200px;
     }
     
     .step-content h3 {
       margin-bottom: 0.5rem;
+      font-size: 1.125rem;
+      color: #1f2937;
     }
     
+    .step-content p {
+      color: #6b7280;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    
+    /* Call to Action - Mobile Optimized */
+    .cta-section {
+      text-align: center;
+      margin: 3rem 0;
+      padding: 2rem 1rem;
+    }
+    
+    @media (min-width: 640px) {
+      .cta-section {
+        margin: 4rem 0;
+        padding: 2rem;
+      }
+    }
+    
+    .cta-section p {
+      color: #6b7280;
+      max-width: 600px;
+      margin: 1rem auto 2rem;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+    
+    /* Footer */
+    footer {
+      background: #f9fafb;
+      padding: 2rem 1rem;
+      margin-top: 4rem;
+      border-top: 1px solid #e5e7eb;
+      text-align: center;
+    }
+    
+    footer p {
+      color: #6b7280;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    /* Animations */
     @keyframes rotate {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
     
-    @media (max-width: 768px) {
-      .hero-buttons {
-        flex-direction: column;
-        align-items: center;
-      }
-      
-      .hero-section {
-        padding: 2rem 1rem;
-      }
-      
-      .step {
-        text-align: center;
-        flex-direction: column;
+    /* Utility Classes */
+    .text-center { text-align: center; }
+    .mb-2 { margin-bottom: 2rem; }
+    
+    /* Better touch targets for mobile */
+    @media (max-width: 640px) {
+      .btn, .example-card, .feature-box {
+        min-height: 44px;
       }
     }
   </style>
@@ -203,8 +471,8 @@
           hate speech and offensive content with remarkable accuracy and cultural sensitivity.
         </p>
         <div class="hero-buttons">
-          <a href="{{ url_for('register') }}" class="btn">Get Started Free</a>
-          <a href="{{ url_for('login') }}" class="btn">Login</a>
+          <a href="#" class="btn">Get Started Free</a>
+          <a href="#" class="btn">Login</a>
         </div>
       </div>
     </div>
@@ -241,7 +509,7 @@
     <!-- Examples Section -->
     <div class="examples-section">
       <h2>See It In Action</h2>
-      <p style="text-align: center; color: #6b7280; margin-bottom: 2rem;">
+      <p class="text-center mb-2" style="color: #6b7280;">
         Here are some examples of how our AI detects different types of content:
       </p>
       
@@ -254,7 +522,7 @@
             <span style="color: #059669;">✓</span>
             <span class="status-safe">Safe Content</span>
           </div>
-          <small style="color: #6b7280;">Translation: "Hello everyone! We want to work together to build our country."</small>
+          <small>Translation: "Hello everyone! We want to work together to build our country."</small>
         </div>
 
         <div class="example-card">
@@ -265,7 +533,7 @@
             <span style="color: #dc2626;">⚠</span>
             <span class="status-flagged">Hate Speech Detected</span>
           </div>
-          <small style="color: #6b7280;">Flagged for: divisive language, group targeting</small>
+          <small>Flagged for: divisive language, group targeting</small>
         </div>
 
         <div class="example-card">
@@ -276,7 +544,7 @@
             <span style="color: #059669;">✓</span>
             <span class="status-safe">Safe Content</span>
           </div>
-          <small style="color: #6b7280;">Translation: "We are all Rwandans, we should live well together and participate in development."</small>
+          <small>Translation: "We are all Rwandans, we should live well together and participate in development."</small>
         </div>
 
         <div class="example-card">
@@ -287,7 +555,7 @@
             <span style="color: #dc2626;">⚠</span>
             <span class="status-flagged">Potentially Harmful</span>
           </div>
-          <small style="color: #6b7280;">Flagged for: potential incitement, youth-targeting language</small>
+          <small>Flagged for: potential incitement, youth-targeting language</small>
         </div>
       </div>
     </div>
@@ -352,37 +620,42 @@
       <div class="stats-grid">
         <div class="stat-item">
           <h3>10,000+</h3>
-          <p style="color: #6b7280;">Texts Analyzed</p>
+          <p>Texts Analyzed</p>
         </div>
         <div class="stat-item">
           <h3>95%</h3>
-          <p style="color: #6b7280;">Accuracy Rate</p>
+          <p>Accuracy Rate</p>
         </div>
         <div class="stat-item">
           <h3>500+</h3>
-          <p style="color: #6b7280;">Active Users</p>
+          <p>Active Users</p>
         </div>
         <div class="stat-item">
           <h3>24/7</h3>
-          <p style="color: #6b7280;">Availability</p>
+          <p>Availability</p>
         </div>
       </div>
     </div>
 
     <!-- Call to Action -->
-    <div style="text-align: center; margin: 4rem 0;">
+    <div class="cta-section">
       <h2>Ready to Create Safer Digital Spaces?</h2>
-      <p style="color: #6b7280; max-width: 600px; margin: 1rem auto 2rem;">
+      <p>
         Join hundreds of content creators, community managers, and platform owners who trust our AI to keep their digital spaces respectful and inclusive.
       </p>
       <div class="hero-buttons">
-        <a href="{{ url_for('register') }}" class="btn">Start Free Trial</a>
+        <a href="#" class="btn">Start Free Trial</a>
         <a href="#examples" class="btn">View More Examples</a>
       </div>
     </div>
+  </div>
 
-    <!-- Footer -->
-    <footer>
-      <div style="max-width: 800px; margin: 0 auto; text-align: center;">
-        <p style="margin-bottom: 1rem;">
-          <strong>Kinyarwanda Hate Speech Detection</strong> - Building bridges,
+  <!-- Footer -->
+  <footer>
+    <div style="max-width: 800px; margin: 0 auto;">
+      <p><strong>Kinyarwanda Hate Speech Detection</strong> - Building bridges, not walls</p>
+      <p>© 2025 All rights reserved | Contact: info@speech-detection.com</p>
+    </div>
+  </footer>
+</body>
+</html>
