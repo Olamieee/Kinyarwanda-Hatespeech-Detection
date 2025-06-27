@@ -1,127 +1,479 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Moderator Dashboard - Kinyarwanda Hate Speech Detection</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      background: #f9fafb;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+    
+    /* Mobile-first responsive design */
+    @media (min-width: 640px) {
+      .container {
+        padding: 0 2rem;
+      }
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #8b5cf6 100%);
+      color: white;
+      padding: 2rem 0;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .header-title {
+      font-size: 2rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    @media (min-width: 640px) {
+      .header-title {
+        font-size: 2.5rem;
+      }
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .header-btn {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .header-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .header-btn.danger {
+      background: rgba(220, 38, 38, 0.8);
+    }
+
+    .header-btn.danger:hover {
+      background: rgba(220, 38, 38, 0.9);
+    }
+
+    /* Welcome Section */
+    .welcome-section {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      padding: 2rem;
+      border-radius: 16px;
+      margin-bottom: 2rem;
+      text-align: center;
+      border: 1px solid #e5e7eb;
+    }
+
+    .welcome-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 0.5rem;
+    }
+
+    .welcome-description {
+      color: #6b7280;
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* Stats Grid */
+    .stats-section {
+      margin-bottom: 3rem;
+    }
+
+    .section-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      color: #1f2937;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (min-width: 640px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .stat-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      text-align: center;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      color: #6b7280;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .stat-card:nth-child(1) .stat-number { color: #3b82f6; }
+    .stat-card:nth-child(2) .stat-number { color: #dc2626; }
+    .stat-card:nth-child(3) .stat-number { color: #10b981; }
+    .stat-card:nth-child(4) .stat-number { color: #f59e0b; }
+
+    /* Detailed Stats */
+    .detailed-stats {
+      display: grid;
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+
+    @media (min-width: 768px) {
+      .detailed-stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .detailed-stats {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .detail-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .detail-card h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #1f2937;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .detail-list {
+      list-style: none;
+    }
+
+    .detail-list li {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #f3f4f6;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+
+    .detail-list li:last-child {
+      border-bottom: none;
+    }
+
+    .detail-value {
+      font-weight: 600;
+      color: #374151;
+    }
+
+    /* Flagged Content Section */
+    .flagged-section {
+      background: white;
+      border-radius: 16px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .flagged-header {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      padding: 1.5rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .flagged-header h2 {
+      color: #991b1b;
+      font-size: 1.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .flagged-content {
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    .flagged-item {
+      padding: 1.5rem;
+      border-bottom: 1px solid #f3f4f6;
+      transition: background-color 0.3s ease;
+    }
+
+    .flagged-item:hover {
+      background: #f9fafb;
+    }
+
+    .flagged-item:last-child {
+      border-bottom: none;
+    }
+
+    .flagged-meta {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+      font-size: 0.85rem;
+      color: #6b7280;
+    }
+
+    .user-id {
+      background: #e5e7eb;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .timestamp {
+      background: #f3f4f6;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .flagged-text {
+      background: #fef2f2;
+      padding: 1rem;
+      border-radius: 8px;
+      border-left: 4px solid #dc2626;
+      margin-bottom: 0.75rem;
+      font-style: italic;
+      color: #374151;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .flagged-details {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .label-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .explanation {
+      background: #fef3c7;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: #78350f;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .no-flagged {
+      text-align: center;
+      padding: 3rem;
+      color: #6b7280;
+    }
+
+    .no-flagged h3 {
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+      color: #10b981;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 640px) {
+      .header-content {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .header-title {
+        font-size: 1.5rem;
+      }
+      
+      .header-actions {
+        justify-content: center;
+      }
+      
+      .welcome-section {
+        padding: 1.5rem;
+      }
+      
+      .detail-card,
+      .stat-card {
+        padding: 1.25rem;
+      }
+      
+      .flagged-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+      
+      .flagged-details {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    /* Loading animation */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .loading {
+      animation: pulse 2s infinite;
+    }
+
+    /* Scrollbar styling */
+    .flagged-content::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .flagged-content::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+
+    .flagged-content::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 3px;
+    }
+
+    .flagged-content::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <div class="top-nav">
-      <h2>Moderator Dashboard</h2>
-      <div class="nav-buttons">
-        <a href="{{ url_for('export_flagged') }}" class="btn export-btn">Export CSV</a>
-        <a href="{{ url_for('logout') }}" class="btn">Logout</a>
-      </div>
-    </div>
-
-    <div class="dashboard-intro">
-      <div class="dashboard-intro-content">
-        <h2>Content Moderation Center</h2>
-        <p>
-          Monitor and manage content across the platform. Track flagged content, analyze user behavior patterns, 
-          and maintain a safe digital environment for all users with comprehensive analytics and reporting tools.
-        </p>
-      </div>
-    </div>
-
-    <!-- Quick Stats Overview -->
-    <div class="stats-grid">
-      <div class="stat-item">
-        <h3>{{ stats.total_users }}</h3>
-        <p>Total Users</p>
-      </div>
-      <div class="stat-item">
-        <h3>{{ stats.total_flagged }}</h3>
-        <p>Flagged Content</p>
-      </div>
-      <div class="stat-item">
-        <h3>{{ stats.flagged_week }}</h3>
-        <p>This Week</p>
-      </div>
-      <div class="stat-item">
-        <h3>{{ stats.flagged_percentage | round(1) }}%</h3>
-        <p>Flag Rate</p>
-      </div>
-    </div>
-
-    <!-- Detailed Statistics -->
-    <div class="moderator-stats">
-      <h3>📊 Detailed Analytics</h3>
-      <ul>
-        <li><strong>Average Flagged Content Per User:</strong> {{ stats.avg_flagged_per_user | round(2) }}</li>
-        <li><strong>Flagged Content Percentage of Total Analyses:</strong> {{ stats.flagged_percentage | round(2) }}%</li>
-      </ul>
-
-      <h3>🏷️ Content by Classification</h3>
-      <ul>
-        {% for label, count in stats.counts_by_label.items() %}
-          <li><strong>{{ label|title }}:</strong> {{ count }} items</li>
-        {% endfor %}
-      </ul>
-
-      <h3>👥 Top Users with Flagged Content</h3>
-      <ul>
-        {% for user_id, count in stats.top_users %}
-          <li><strong>User ID {{ user_id }}:</strong> {{ count }} flagged items</li>
-        {% endfor %}
-      </ul>
-
-      <h3>🔍 Most Common Flagged Terms</h3>
-      <ul>
-        {% for word, freq in stats.top_words %}
-          <li><strong>"{{ word }}"</strong> - appeared {{ freq }} times</li>
-        {% endfor %}
-      </ul>
-    </div>
-
-    <!-- Flagged Content List -->
-    <div class="flagged-content">
-      <h3>🚨 Recent Flagged Content</h3>
-      {% if flagged %}
-        <ul>
-          {% for item in flagged %}
-            <li>
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-                <strong>User ID: {{ item.user_id }}</strong>
-                <small style="color: #6b7280;">{{ item.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
-              </div>
-              
-              <div style="background: white; padding: 1rem; border-radius: 8px; margin: 0.5rem 0; border-left: 3px solid #dc2626;">
-                <p style="font-style: italic; margin-bottom: 0.5rem;">"{{ item.tweet_text }}"</p>
-              </div>
-              
-              <div style="display: flex; gap: 1rem; margin-top: 0.5rem; flex-wrap: wrap;">
-                <span style="background: #dc2626; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
-                  {{ item.predicted_label|upper }}
-                </span>
-                {% if item.explanation_words %}
-                  <span style="background: #f59e0b; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
-                    Key words: {{ item.explanation_words }}
-                  </span>
-                {% endif %}
-              </div>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <div style="text-align: center; padding: 3rem; color: #6b7280;">
-          <p>🎉 No flagged content found! The community is behaving well.</p>
-        </div>
-      {% endif %}
-    </div>
-
-    <!-- Action Center -->
-    <div class="dashboard-intro" style="margin-top: 3rem;">
-      <div class="dashboard-intro-content">
-        <h2>Quick Actions</h2>
-        <p>Export flagged content data for further analysis or reporting to administrators.</p>
-        <div style="margin-top: 1.5rem;">
-          <a href="{{ url_for('export_flagged') }}" class="btn export-btn">Download Full Report (CSV)</a>
+  <div class="header">
+    <div class="container">
+      <div class="header-content">
+        <h1 class="header-title">
+          🛡️ Moderator Dashboard
+        </h1>
+        <div class="header-actions">
+          <a href="{{ url_for('export_flagged') }}" class="header-btn">
+            📊 Export CSV
+          </a>
+          <a href="{{ url_for('logout') }}" class="header-btn danger">
+            🚪 Logout
+          </a>
         </div>
       </div>
     </div>
   </div>
-</body>
-</html>
+
+  <div class="container">
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+      <h2 class="welcome-title">Content Moderation Command Center</h2>
+      <p class="welcome-description">
+        Monitor and analyze hate speech detection across your platform. Track user behavior, 
+        review flagged content, and maintain a safe digital environment for your community.
+      </p>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="stats-section">
+      <h2 class="section-title">📈 Overview Statistics</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number">{{ stats.total_users }}</div>
+          <div class="stat-label">Registered Users</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ stats.total_flagged }}</div>
+          <div class="stat-label">Flagged Content</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ stats.flagged_week }}</div>
+          <div class="stat-label">This Week</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ stats.flagged_percentage | round(1) }}%</div>
+          <div class="stat-label">Flagged Rate</div>
+        </div>
+      </div>
