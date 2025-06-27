@@ -2,36 +2,67 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Kinyarwanda Hate Speech Detection</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
   <div class="container">
-    <h2>Welcome, {{ current_user.full_name }}!</h2>
-    <a href="{{ url_for('logout') }}" class="btn">Logout</a>
+    <div class="top-nav">
+      <h2>Welcome, {{ current_user.full_name }}!</h2>
+      <div class="nav-buttons">
+        <a href="{{ url_for('logout') }}" class="btn">Logout</a>
+      </div>
+    </div>
 
-    <form method="POST">
-      <textarea name="tweet" placeholder="Enter tweet..." required>{{ text }}</textarea>
-      <button type="submit">Analyze</button>
+    <div class="dashboard-intro">
+      <div class="dashboard-intro-content">
+        <h2>AI-Powered Text Analysis</h2>
+        <p>
+          Analyze your Kinyarwanda text for hate speech and offensive content using our advanced machine learning models. 
+          Get instant results with detailed explanations to understand what triggered our detection system.
+        </p>
+      </div>
+    </div>
+
+    <form method="POST" class="analysis-form">
+      <label for="tweet">Enter your text for analysis:</label>
+      <textarea name="tweet" id="tweet" placeholder="Type or paste your Kinyarwanda text here..." required>{{ text }}</textarea>
+      <button type="submit" class="btn">Analyze Text</button>
     </form>
 
     {% if result %}
-      <p class="result">Prediction: <strong>{{ result }}</strong></p>
-      {% if explanation %}
-        <p><strong>Top Words:</strong> {{ explanation|join(', ') }}</p>
-      {% endif %}
+      <div class="result">
+        <p><strong>Analysis Result:</strong> {{ result }}</p>
+        {% if explanation %}
+          <p><strong>Key Words Detected:</strong> {{ explanation|join(', ') }}</p>
+        {% endif %}
+      </div>
     {% endif %}
 
-    <h3>Analysis History</h3>
-    <ul>
-      {% for item in history %}
-        <li><strong>{{ item.tweet_text }}</strong> → {{ item.predicted_label }}
-        {% if item.explanation_words %}
-          <br><small>Explanation: {{ item.explanation_words }}</small>
-        {% endif %}
-        </li>
-      {% endfor %}
-    </ul>
+    <div class="analysis-history">
+      <h3>Your Analysis History</h3>
+      {% if history %}
+        <ul>
+          {% for item in history %}
+            <li>
+              <strong>"{{ item.tweet_text[:100] }}{% if item.tweet_text|length > 100 %}...{% endif %}"</strong> 
+              <br>
+              <span style="color: {% if item.predicted_label == 'hate speech' %}#dc2626{% else %}#059669{% endif %};">
+                → {{ item.predicted_label|title }}
+              </span>
+              {% if item.explanation_words %}
+                <br><small><strong>Explanation:</strong> {{ item.explanation_words }}</small>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div style="text-align: center; padding: 2rem; color: #6b7280;">
+          <p>No analysis history yet. Start by analyzing some text above!</p>
+        </div>
+      {% endif %}
+    </div>
   </div>
 </body>
 </html>
