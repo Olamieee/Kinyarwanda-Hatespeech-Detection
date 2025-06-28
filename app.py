@@ -10,6 +10,15 @@ from sqlalchemy import func
 import logging
 from dotenv import load_dotenv
 import os
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["10 per minute"]
+)
 
 app = Flask(__name__)
 app.secret_key = "replace_with_a_secret_key"
@@ -371,6 +380,24 @@ def export_flagged():
     response.headers['Content-Disposition'] = 'attachment; filename=flagged_reports.csv'
     response.headers['Content-Type'] = 'text/csv'
     return response
+
+
+# @app.route('/api/analyze', methods=['POST'])
+# @limiter.limit("5 per minute")
+# def api_analyze():
+#     data = request.get_json()
+#     text = data.get('text', '')
+#     if not text:
+#         return jsonify({"error": "No text provided"}), 400
+
+#     cleaned = preprocess_text(text)
+#     vec = vectorizer.transform([cleaned])
+#     pred = model.predict(vec)[0]
+#     label = label_encoder.inverse_transform([pred])[0]
+
+#     return jsonify({
+#         "prediction": label
+#     })
 
 if __name__ == "__main__":
     with app.app_context():
