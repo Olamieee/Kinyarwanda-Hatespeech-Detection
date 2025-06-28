@@ -10,3 +10,4 @@ sqlalchemy
 dotenv
 scikit-learn
 Flask-Dance
+flask-limiter
