@@ -9,3 +9,4 @@ numpy
 sqlalchemy
 dotenv
 scikit-learn
+Flask-Dance
