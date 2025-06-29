@@ -3,17 +3,100 @@
 <head>
   <title>Kinyarwanda Hate Speech Checker</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 15px; width: 300px; }
-    #result { margin-top: 10px; }
-    .safe { color: green; }
-    .flagged { color: red; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      padding: 20px;
+      width: 300px;
+      min-height: 200px;
+    }
+    
+    h3 {
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-size: 1.25rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    
+    #analyzeBtn {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: white;
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+    
+    #analyzeBtn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px -2px rgba(59, 130, 246, 0.3);
+    }
+    
+    #analyzeBtn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px -1px rgba(59, 130, 246, 0.2);
+    }
+    
+    #result {
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e5e7eb;
+      font-size: 0.9rem;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    
+    .safe {
+      color: #059669;
+      font-weight: 600;
+      background: #f0fdf4;
+      padding: 0.5rem;
+      border-radius: 6px;
+      border: 1px solid #bbf7d0;
+    }
+    
+    .flagged {
+      color: #dc2626;
+      font-weight: 600;
+      background: #fef2f2;
+      padding: 0.5rem;
+      border-radius: 6px;
+      border: 1px solid #fecaca;
+    }
+    
+    #result:empty::after {
+      content: "Select text on the page and click analyze";
+      color: #6b7280;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
   <h3>Kinyarwanda Hate Speech Checker</h3>
   <button id="analyzeBtn">Analyze Highlighted Text</button>
   <div id="result"></div>
-
   <script src="popup.js"></script>
 </body>
 </html>
