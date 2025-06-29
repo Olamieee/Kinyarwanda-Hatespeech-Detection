@@ -382,22 +382,38 @@ def export_flagged():
     return response
 
 
-# @app.route('/api/analyze', methods=['POST'])
-# @limiter.limit("5 per minute")
-# def api_analyze():
-#     data = request.get_json()
-#     text = data.get('text', '')
-#     if not text:
-#         return jsonify({"error": "No text provided"}), 400
+@app.route('/api/analyze', methods=['POST'])
+@login_required  # Requires the mod/user to be logged in
+def api_analyze():
+    if not request.json or 'text' not in request.json:
+        return jsonify({'error': 'Missing text'}), 400
 
-#     cleaned = preprocess_text(text)
-#     vec = vectorizer.transform([cleaned])
-#     pred = model.predict(vec)[0]
-#     label = label_encoder.inverse_transform([pred])[0]
+    raw_text = request.json['text']
+    cleaned = preprocess_text(raw_text)
+    vec = vectorizer.transform([cleaned])
+    pred = model.predict(vec)[0]
+    label = label_encoder.inverse_transform([pred])[0]
 
-#     return jsonify({
-#         "prediction": label
-#     })
+    # Explanation (top 5 influential words)
+    feature_names = vectorizer.get_feature_names_out()
+    coefs = model.coef_[int(pred)]
+    word_weights = vec.toarray()[0] * coefs
+    top_indices = np.argsort(word_weights)[::-1][:5]
+    explanation_words = [feature_names[i] for i in top_indices if vec.toarray()[0][i] > 0]
+
+    db.session.add(AnalysisHistory(
+        user_id=current_user.id if current_user.is_authenticated else None,
+        tweet_text=raw_text,
+        predicted_label=label,
+        explanation_words=", ".join(explanation_words)
+    ))
+    db.session.commit()
+
+    return jsonify({
+        'label': label,
+        'explanation': explanation_words
+    })
+
 
 if __name__ == "__main__":
     with app.app_context():

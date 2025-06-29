@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Kinyarwanda Hate Speech Checker",
+  "version": "1.0",
+  "description": "Highlight text, click the icon to analyze it for hate speech using your server.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["https://kinyarwanda-hatespeech-detection.onrender.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon.png"
+    }
+  },
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  }
+}
