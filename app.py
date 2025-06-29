@@ -14,14 +14,15 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 
+app = Flask(__name__)
+app.secret_key = "replace_with_a_secret_key"
+
 limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["10 per minute"]
 )
 
-app = Flask(__name__)
-app.secret_key = "replace_with_a_secret_key"
 load_dotenv()
 
 # Setup logging for debug
