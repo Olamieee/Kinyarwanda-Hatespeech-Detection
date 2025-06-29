@@ -120,61 +120,60 @@
       box-shadow: 0 6px 12px -2px rgba(59, 130, 246, 0.3);
     }
     
-    /* Google Auth Styles */
-    .auth-divider {
+    .divider {
       display: flex;
       align-items: center;
       margin: 1.5rem 0;
-      text-align: center;
+      color: #6b7280;
+      font-size: 0.875rem;
     }
     
-    .auth-divider::before,
-    .auth-divider::after {
+    .divider::before,
+    .divider::after {
       content: '';
       flex: 1;
       height: 1px;
       background: #e5e7eb;
     }
     
-    .auth-divider span {
-      color: #6b7280;
-      padding: 0 1rem;
-      font-size: 0.875rem;
-      font-weight: 500;
-      background: white;
+    .divider::before {
+      margin-right: 1rem;
     }
     
-    .google-auth {
-      margin: 1rem 0;
+    .divider::after {
+      margin-left: 1rem;
     }
     
-    .btn-google {
-      width: 100%;
+    .google-auth-section {
+      margin: 1.5rem 0;
+    }
+    
+    .google-login-btn {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.75rem;
+      width: 100%;
       padding: 0.875rem 1rem;
       background: white;
-      color: #374151;
       border: 1px solid #d1d5db;
       border-radius: 8px;
+      color: #374151;
       text-decoration: none;
       font-size: 1rem;
-      font-weight: 600;
+      font-weight: 500;
       transition: all 0.3s ease;
       position: relative;
       overflow: hidden;
     }
     
-    .btn-google:hover {
+    .google-login-btn:hover {
       background: #f9fafb;
       border-color: #9ca3af;
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.1);
     }
     
-    .btn-google:active {
+    .google-login-btn:active {
       transform: translateY(0);
       box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
     }
@@ -182,7 +181,9 @@
     .google-icon {
       width: 20px;
       height: 20px;
-      flex-shrink: 0;
+      margin-right: 0.75rem;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%234285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="%2334A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="%23FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="%23EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>') no-repeat center;
+      background-size: contain;
     }
     
     .register-link {
@@ -216,6 +217,17 @@
       .login-header h2 {
         font-size: 1.75rem;
       }
+      
+      .google-login-btn {
+        font-size: 0.9rem;
+        padding: 0.8rem 1rem;
+      }
+      
+      .google-icon {
+        width: 18px;
+        height: 18px;
+        margin-right: 0.5rem;
+      }
     }
   </style>
 </head>
@@ -232,6 +244,15 @@
       {% endfor %}
     {% endwith %}
 
+    <div class="google-auth-section">
+      <a href="{{ url_for('google.login') }}" class="google-login-btn">
+        <div class="google-icon"></div>
+        Continue with Google
+      </a>
+    </div>
+
+    <div class="divider">or</div>
+
     <form method="POST" action="{{ url_for('login') }}">
       <div>
         <label>Username</label>
@@ -245,22 +266,6 @@
 
       <button type="submit">Sign In</button>
     </form>
-
-    <div class="auth-divider">
-      <span>or continue with</span>
-    </div>
-
-    <div class="google-auth">
-      <a href="{{ url_for('google.login') }}" class="btn-google">
-        <svg class="google-icon" viewBox="0 0 24 24">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-        </svg>
-        Continue with Google
-      </a>
-    </div>
 
     <div class="register-link">
       <p>Don't have an account? <a href="{{ url_for('register') }}">Create one here</a></p>
