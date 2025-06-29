@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import os
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_dance.contrib.google import make_google_blueprint, google
 
 
 app = Flask(__name__)
@@ -133,7 +134,14 @@ If you didn’t request this, you can safely ignore this message.
         logging.error(f"Failed to send verification email: {e}")
         return False
 
-
+# Register Google blueprint
+google_bp = make_google_blueprint(
+    client_id=os.getenv('GOOGLE_OAUTH_CLIENT_ID'),
+    client_secret=os.getenv('GOOGLE_OAUTH_CLIENT_SECRET'),
+    redirect_url='/login/google/authorized',
+    scope=["profile", "email"]
+)
+app.register_blueprint(google_bp, url_prefix="/login")
 # Rate limiting
 user_last_requests = {}
 
@@ -382,6 +390,35 @@ def export_flagged():
     response.headers['Content-Type'] = 'text/csv'
     return response
 
+@app.route('/login/google')
+def login_google():
+    if not google.authorized:
+        return redirect(url_for('google.login'))
+
+    resp = google.get("/oauth2/v2/userinfo")
+    if not resp.ok:
+        flash("Failed to fetch info from Google.", "danger")
+        return redirect(url_for('login'))
+
+    info = resp.json()
+    email = info["email"]
+
+    # Check if user exists
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        # New user: register
+        user = User(
+            full_name=info.get("name", email.split("@")[0]),
+            username=email.split("@")[0],
+            email=email,
+            is_verified=True
+        )
+        db.session.add(user)
+        db.session.commit()
+
+    login_user(user)
+    flash("Logged in with Google!", "success")
+    return redirect(url_for("dashboard" if user.role == "user" else "moderator_dashboard"))
 
 @app.route('/api/analyze', methods=['POST'])
 @login_required  # Requires the mod/user to be logged in
