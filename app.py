@@ -61,10 +61,16 @@ def get_base_url():
     """Get base URL based on environment"""
     if os.getenv('RENDER'):
         return f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}"
+    # For local development, use HTTP (we'll handle the insecure transport)
     return os.getenv('BASE_URL', 'http://127.0.0.1:5000')
 
 BASE_URL = get_base_url()
 logging.info(f"Using base URL: {BASE_URL}")
+
+# IMPORTANT: Allow insecure transport for local development
+if not os.getenv('RENDER'):  # Only for local development
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+    logging.info("Insecure transport enabled for local development")
 
 # Mail Configuration
 app.config['MAIL_SERVER'] = 'smtp.sendgrid.net'
@@ -85,13 +91,16 @@ login_manager = LoginManager()
 login_manager.login_view = "login"
 login_manager.init_app(app)
 
-# Google OAuth setup - now GOOGLE_AUTH_ENABLED is defined
+# Google OAuth setup - FIXED VERSION
 if GOOGLE_AUTH_ENABLED:
+    # Use the exact scope format that Google returns
     google_bp = make_google_blueprint(
         client_id=GOOGLE_CLIENT_ID,
         client_secret=GOOGLE_CLIENT_SECRET,
         redirect_url=f'{BASE_URL}/login/google/authorized',
-        scope=["profile", "email"]
+        scope=["https://www.googleapis.com/auth/userinfo.profile", 
+               "https://www.googleapis.com/auth/userinfo.email", 
+               "openid"]
     )
     app.register_blueprint(google_bp, url_prefix="/login")
     logging.info(f"Google OAuth redirect URL: {BASE_URL}/login/google/authorized")
@@ -447,25 +456,35 @@ def login_google():
         return redirect(url_for('login'))
         
     return redirect(url_for('google.login'))
-# Add the OAuth callback handler
+
+# FIXED OAuth callback handler with proper error handling
 @app.route('/login/google/authorized')
 def login_google_authorized():
     if not GOOGLE_AUTH_ENABLED:
         flash("Google authentication is not configured.", "danger")
         return redirect(url_for('login'))
         
-    if not google.authorized:
-        flash("Failed to log in with Google.", "danger")
-        return redirect(url_for('login'))
-
     try:
+        # Check if authorization was successful
+        if not google.authorized:
+            flash("Failed to log in with Google.", "danger")
+            logging.error("Google OAuth not authorized")
+            return redirect(url_for('login'))
+
+        # Get user info from Google
         resp = google.get("/oauth2/v2/userinfo")
         if not resp.ok:
             flash("Failed to fetch info from Google.", "danger")
+            logging.error(f"Failed to get user info from Google: {resp.status_code}")
             return redirect(url_for('login'))
 
         info = resp.json()
-        email = info["email"]
+        email = info.get("email")
+        
+        if not email:
+            flash("Failed to get email from Google.", "danger")
+            logging.error("No email received from Google")
+            return redirect(url_for('login'))
         
         logging.info(f"Google OAuth successful for email: {email}")
 
@@ -493,8 +512,14 @@ def login_google_authorized():
             db.session.add(user)
             db.session.commit()
             flash("Account created and logged in with Google!", "success")
+            logging.info(f"New user created via Google OAuth: {email}")
         else:
+            # Update OAuth provider if not set
+            if not user.oauth_provider:
+                user.oauth_provider = "google"
+                db.session.commit()
             flash("Logged in with Google!", "success")
+            logging.info(f"Existing user logged in via Google OAuth: {email}")
 
         login_user(user)
         return redirect(url_for("dashboard" if user.role == "user" else "moderator_dashboard"))
@@ -503,7 +528,6 @@ def login_google_authorized():
         logging.error(f"Google OAuth error: {e}")
         flash("An error occurred during Google authentication.", "danger")
         return redirect(url_for('login'))
-
 
 @app.route('/api/analyze', methods=['POST'])
 @login_required  # Requires the user to be logged in
