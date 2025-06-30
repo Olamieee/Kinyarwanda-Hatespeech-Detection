@@ -315,13 +315,14 @@
     {% endfor %}
     {% endwith %}
 
+    {% if google_auth_enabled %}
     <div class="google-auth-section">
-      {% if google_auth_enabled %}
-      <a href="{{ url_for('google.login') }}" class="google-login-btn">
-        Continue with Google
+      <a href="{{ url_for('google.login') }}" class="google-register-btn">
+        <div class="google-icon"></div>
+        Sign up with Google
       </a>
-      {% endif %}
     </div>
+    {% endif %}
 
     <div class="auth-note">
       <p>Quick signup with Google - no forms to fill!</p>

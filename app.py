@@ -4,7 +4,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Message, Mail
 from datetime import datetime, timedelta
-import joblib, re, random, string, time
+import joblib, re, random, string, time, secrets
 import numpy as np
 from sqlalchemy import func
 import logging
@@ -19,37 +19,58 @@ from flask import Blueprint
 # Load environment variables first
 load_dotenv()
 
+# Setup logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Create Flask app
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', "replace_with_a_secret_key")
+
+# Secret key setup - CRITICAL for security
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    SECRET_KEY = secrets.token_hex(32)
+    logging.warning("No SECRET_KEY found in environment. Using generated key.")
+    logging.warning(f"For production, set SECRET_KEY={SECRET_KEY}")
+
+app.secret_key = SECRET_KEY
 
 # Enable CORS for the extension
 CORS(app, supports_credentials=True, origins=["chrome-extension://*"])
 
+# Rate limiter
 limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["10 per minute"]
 )
 
-# Setup logging for debug
-logging.basicConfig(level=logging.DEBUG)
-
-# Check if Google OAuth credentials are available
+# Check Google OAuth credentials EARLY
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET')
 
-if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+# Define GOOGLE_AUTH_ENABLED before using it anywhere
+GOOGLE_AUTH_ENABLED = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
+
+if not GOOGLE_AUTH_ENABLED:
     logging.warning("Google OAuth credentials not found. Google authentication will be disabled.")
-    GOOGLE_AUTH_ENABLED = False
 else:
-    GOOGLE_AUTH_ENABLED = True
     logging.info("Google OAuth credentials loaded successfully.")
 
-#Mail Configuration
+# Base URL function
+def get_base_url():
+    """Get base URL based on environment"""
+    if os.getenv('RENDER'):
+        return f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}"
+    return os.getenv('BASE_URL', 'http://127.0.0.1:5000')
+
+BASE_URL = get_base_url()
+logging.info(f"Using base URL: {BASE_URL}")
+
+# Mail Configuration
 app.config['MAIL_SERVER'] = 'smtp.sendgrid.net'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'apikey' 
+app.config['MAIL_USERNAME'] = 'apikey'
 app.config['MAIL_PASSWORD'] = os.getenv('SENDGRID_API_KEY')
 app.config['MAIL_DEFAULT_SENDER'] = 'longelee333@gmail.com'
 
@@ -63,6 +84,17 @@ db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.login_view = "login"
 login_manager.init_app(app)
+
+# Google OAuth setup - now GOOGLE_AUTH_ENABLED is defined
+if GOOGLE_AUTH_ENABLED:
+    google_bp = make_google_blueprint(
+        client_id=GOOGLE_CLIENT_ID,
+        client_secret=GOOGLE_CLIENT_SECRET,
+        redirect_url=f'{BASE_URL}/login/google/authorized',
+        scope=["profile", "email"]
+    )
+    app.register_blueprint(google_bp, url_prefix="/login")
+    logging.info(f"Google OAuth redirect URL: {BASE_URL}/login/google/authorized")
 
 # Stopwords
 kinyarwanda_stopwords = {
@@ -150,26 +182,6 @@ If you didn't request this, you can safely ignore this message.
         logging.error(f"Failed to send verification email: {e}")
         return False
 
-# Register Google blueprint only if credentials are available
-if GOOGLE_AUTH_ENABLED:
-    google_bp = make_google_blueprint(
-        client_id=GOOGLE_CLIENT_ID,
-        client_secret=GOOGLE_CLIENT_SECRET,
-        redirect_url='/login/google/authorized',
-        scope=["profile", "email"]
-    )
-    app.register_blueprint(google_bp, url_prefix="/login")
-else:
-    # Create a dummy blueprint to prevent template errors
-    google_bp = Blueprint('google', __name__)
-    
-    @google_bp.route('/login')
-    def login():
-        flash("Google authentication is not configured.", "danger")
-        return redirect(url_for('login'))
-    
-    app.register_blueprint(google_bp, url_prefix="/login")
-
 # Rate limiting
 user_last_requests = {}
 
@@ -250,6 +262,12 @@ def home():
         return redirect(url_for('dashboard' if current_user.role == 'user' else 'moderator_dashboard'))
     return render_template('index.html', google_auth_enabled=GOOGLE_AUTH_ENABLED)
 
+@app.route('/register/google')
+def register_google():
+    """Same as login with Google - OAuth handles both cases"""
+    return login_google()
+
+# Update your register route to show Google option
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -285,6 +303,7 @@ def register():
 
         return redirect(url_for("verify", username=username))
     return render_template("register.html", google_auth_enabled=GOOGLE_AUTH_ENABLED)
+
 
 @app.route('/verify/<username>', methods=['GET', 'POST'])
 def verify(username):
@@ -427,34 +446,64 @@ def login_google():
         flash("Google authentication is not configured.", "danger")
         return redirect(url_for('login'))
         
+    return redirect(url_for('google.login'))
+# Add the OAuth callback handler
+@app.route('/login/google/authorized')
+def login_google_authorized():
+    if not GOOGLE_AUTH_ENABLED:
+        flash("Google authentication is not configured.", "danger")
+        return redirect(url_for('login'))
+        
     if not google.authorized:
-        return redirect(url_for('google.login'))
-
-    resp = google.get("/oauth2/v2/userinfo")
-    if not resp.ok:
-        flash("Failed to fetch info from Google.", "danger")
+        flash("Failed to log in with Google.", "danger")
         return redirect(url_for('login'))
 
-    info = resp.json()
-    email = info["email"]
+    try:
+        resp = google.get("/oauth2/v2/userinfo")
+        if not resp.ok:
+            flash("Failed to fetch info from Google.", "danger")
+            return redirect(url_for('login'))
 
-    # Check if user exists
-    user = User.query.filter_by(email=email).first()
-    if not user:
-        # New user: register
-        user = User(
-            full_name=info.get("name", email.split("@")[0]),
-            username=email.split("@")[0] + "_" + str(random.randint(1000, 9999)),  # Ensure unique username
-            email=email,
-            is_verified=True,
-            oauth_provider="google"
-        )
-        db.session.add(user)
-        db.session.commit()
+        info = resp.json()
+        email = info["email"]
+        
+        logging.info(f"Google OAuth successful for email: {email}")
 
-    login_user(user)
-    flash("Logged in with Google!", "success")
-    return redirect(url_for("dashboard" if user.role == "user" else "moderator_dashboard"))
+        # Check if user exists
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            # New user: register automatically
+            base_username = email.split("@")[0]
+            username = base_username
+            counter = 1
+            
+            # Ensure unique username
+            while User.query.filter_by(username=username).first():
+                username = f"{base_username}_{counter}"
+                counter += 1
+            
+            user = User(
+                full_name=info.get("name", email.split("@")[0]),
+                username=username,
+                email=email,
+                is_verified=True,
+                oauth_provider="google",
+                role="user"  # Default role
+            )
+            db.session.add(user)
+            db.session.commit()
+            flash("Account created and logged in with Google!", "success")
+        else:
+            flash("Logged in with Google!", "success")
+
+        login_user(user)
+        return redirect(url_for("dashboard" if user.role == "user" else "moderator_dashboard"))
+
+    except Exception as e:
+        logging.error(f"Google OAuth error: {e}")
+        flash("An error occurred during Google authentication.", "danger")
+        return redirect(url_for('login'))
+
 
 @app.route('/api/analyze', methods=['POST'])
 @login_required  # Requires the user to be logged in
