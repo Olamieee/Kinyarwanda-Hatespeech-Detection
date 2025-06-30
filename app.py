@@ -14,9 +14,11 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_dance.contrib.google import make_google_blueprint, google
 
+# Load environment variables FIRST
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = "replace_with_a_secret_key"
+app.secret_key = os.getenv('SECRET_KEY', "replace_with_a_secret_key")
 
 limiter = Limiter(
     get_remote_address,
@@ -24,11 +26,16 @@ limiter = Limiter(
     default_limits=["10 per minute"]
 )
 
-load_dotenv()
-
 # Setup logging for debug
 logging.basicConfig(level=logging.DEBUG)
 
+# IMPORTANT: Register Google blueprint BEFORE any routes
+google_bp = make_google_blueprint(
+    client_id=os.getenv('GOOGLE_OAUTH_CLIENT_ID'),
+    client_secret=os.getenv('GOOGLE_OAUTH_CLIENT_SECRET'),
+    scope=["profile", "email"]
+)
+app.register_blueprint(google_bp, url_prefix="/login")
 
 #Mail Configuration
 app.config['MAIL_SERVER'] = 'smtp.sendgrid.net'
@@ -37,7 +44,6 @@ app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = 'apikey' 
 app.config['MAIL_PASSWORD'] = os.getenv('SENDGRID_API_KEY')
 app.config['MAIL_DEFAULT_SENDER'] = 'longelee333@gmail.com'
-
 
 mail = Mail(app)
 
@@ -67,7 +73,7 @@ class User(UserMixin, db.Model):
     full_name = db.Column(db.String(100), nullable=False)
     username = db.Column(db.String(100), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(200), nullable=False)
+    password_hash = db.Column(db.String(200), nullable=True)  # Allow NULL for OAuth users
     is_verified = db.Column(db.Boolean, default=False)
     verification_code = db.Column(db.String(10), nullable=True)
     role = db.Column(db.String(20), default="user")
@@ -112,7 +118,7 @@ Thanks for signing up with RHD. Please use the verification code below to comple
 
 Verification Code: {code}
 
-If you didn’t request this, you can safely ignore this message.
+If you didn't request this, you can safely ignore this message.
 
 – The RHD Team
 """
@@ -123,7 +129,7 @@ If you didn’t request this, you can safely ignore this message.
 <p>Thanks for signing up with <strong>RHD</strong>.</p>
 <p>Please use the verification code below to complete your registration:</p>
 <h2 style="color:#2e6c80;">{code}</h2>
-<p>If you didn’t request this, you can safely ignore this message.</p>
+<p>If you didn't request this, you can safely ignore this message.</p>
 <p style="margin-top:20px;">– The RHD Team</p>
 """
 
@@ -134,14 +140,6 @@ If you didn’t request this, you can safely ignore this message.
         logging.error(f"Failed to send verification email: {e}")
         return False
 
-# Register Google blueprint
-google_bp = make_google_blueprint(
-    client_id=os.getenv('GOOGLE_OAUTH_CLIENT_ID'),
-    client_secret=os.getenv('GOOGLE_OAUTH_CLIENT_SECRET'),
-    redirect_url='/login/google/authorized',
-    scope=["profile", "email"]
-)
-app.register_blueprint(google_bp, url_prefix="/login")
 # Rate limiting
 user_last_requests = {}
 
@@ -192,7 +190,7 @@ def get_moderator_stats():
 
     week_ago = datetime.utcnow() - timedelta(days=7)
     flagged_week = AnalysisHistory.query.filter(
-        AnalysisHistory.predicted_label.in_(["offensive", "hate"]),
+        AnalysisHistory.predicted_label.in(["offensive", "hate"]),
         AnalysisHistory.timestamp >= week_ago
     ).count()
 
@@ -254,7 +252,6 @@ def register():
         return redirect(url_for("verify", username=username))
     return render_template("register.html")
 
-
 @app.route('/verify/<username>', methods=['GET', 'POST'])
 def verify(username):
     user = User.query.filter_by(username=username).first_or_404()
@@ -293,7 +290,7 @@ def verify(username):
 def login():
     if request.method == 'POST':
         user = User.query.filter_by(username=request.form['username']).first()
-        if user and check_password_hash(user.password_hash, request.form['password']):
+        if user and user.password_hash and check_password_hash(user.password_hash, request.form['password']):
             if not user.is_verified:
                 flash("Verify your email first.", "warning")
                 return redirect(url_for("verify", username=user.username))
@@ -390,10 +387,12 @@ def export_flagged():
     response.headers['Content-Type'] = 'text/csv'
     return response
 
-@app.route('/login/google')
-def login_google():
+# FIXED: Google OAuth callback route
+@app.route('/login/google/authorized')
+def google_authorized():
     if not google.authorized:
-        return redirect(url_for('google.login'))
+        flash("Failed to log in with Google.", "danger")
+        return redirect(url_for('login'))
 
     resp = google.get("/oauth2/v2/userinfo")
     if not resp.ok:
@@ -406,12 +405,22 @@ def login_google():
     # Check if user exists
     user = User.query.filter_by(email=email).first()
     if not user:
-        # New user: register
+        # New user: register with OAuth
+        username = email.split("@")[0]
+        # Make username unique if it already exists
+        counter = 1
+        original_username = username
+        while User.query.filter_by(username=username).first():
+            username = f"{original_username}{counter}"
+            counter += 1
+            
         user = User(
             full_name=info.get("name", email.split("@")[0]),
-            username=email.split("@")[0],
+            username=username,
             email=email,
-            is_verified=True
+            password_hash=None,  # No password for OAuth users
+            is_verified=True,    # OAuth users are pre-verified
+            role="user"
         )
         db.session.add(user)
         db.session.commit()
@@ -452,9 +461,7 @@ def api_analyze():
         'explanation': explanation_words
     })
 
-
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
     app.run(debug=True)
-
