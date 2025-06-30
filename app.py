@@ -13,12 +13,16 @@ import os
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_dance.contrib.google import make_google_blueprint, google
+from flask_cors import CORS
 
-# Load environment variables FIRST
+# Load environment variables first
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', "replace_with_a_secret_key")
+
+# Enable CORS for the extension
+CORS(app, supports_credentials=True, origins=["chrome-extension://*"])
 
 limiter = Limiter(
     get_remote_address,
@@ -29,13 +33,16 @@ limiter = Limiter(
 # Setup logging for debug
 logging.basicConfig(level=logging.DEBUG)
 
-# IMPORTANT: Register Google blueprint BEFORE any routes
-google_bp = make_google_blueprint(
-    client_id=os.getenv('GOOGLE_OAUTH_CLIENT_ID'),
-    client_secret=os.getenv('GOOGLE_OAUTH_CLIENT_SECRET'),
-    scope=["profile", "email"]
-)
-app.register_blueprint(google_bp, url_prefix="/login")
+# Check if Google OAuth credentials are available
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET')
+
+if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+    logging.warning("Google OAuth credentials not found. Google authentication will be disabled.")
+    GOOGLE_AUTH_ENABLED = False
+else:
+    GOOGLE_AUTH_ENABLED = True
+    logging.info("Google OAuth credentials loaded successfully.")
 
 #Mail Configuration
 app.config['MAIL_SERVER'] = 'smtp.sendgrid.net'
@@ -73,18 +80,20 @@ class User(UserMixin, db.Model):
     full_name = db.Column(db.String(100), nullable=False)
     username = db.Column(db.String(100), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(200), nullable=True)  # Allow NULL for OAuth users
+    password_hash = db.Column(db.String(200), nullable=True)  # Allow null for Google OAuth users
     is_verified = db.Column(db.Boolean, default=False)
     verification_code = db.Column(db.String(10), nullable=True)
     role = db.Column(db.String(20), default="user")
+    oauth_provider = db.Column(db.String(50), nullable=True)  # Track OAuth provider
 
 class AnalysisHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Allow anonymous access
     tweet_text = db.Column(db.Text, nullable=False)
     predicted_label = db.Column(db.String(50))
     explanation_words = db.Column(db.String(300))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    source = db.Column(db.String(50), default="web")  # Track source: web, extension, api
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -140,11 +149,25 @@ If you didn't request this, you can safely ignore this message.
         logging.error(f"Failed to send verification email: {e}")
         return False
 
+# Register Google blueprint only if credentials are available
+if GOOGLE_AUTH_ENABLED:
+    google_bp = make_google_blueprint(
+        client_id=GOOGLE_CLIENT_ID,
+        client_secret=GOOGLE_CLIENT_SECRET,
+        redirect_url='/login/google/authorized',
+        scope=["profile", "email"]
+    )
+    app.register_blueprint(google_bp, url_prefix="/login")
+
 # Rate limiting
 user_last_requests = {}
 
 @app.before_request
 def rate_limit():
+    # Skip rate limiting for extension API calls
+    if request.endpoint == 'api_analyze_public':
+        return
+        
     if current_user.is_authenticated:
         uid = current_user.id
         now = time.time()
@@ -190,7 +213,7 @@ def get_moderator_stats():
 
     week_ago = datetime.utcnow() - timedelta(days=7)
     flagged_week = AnalysisHistory.query.filter(
-        AnalysisHistory.predicted_label.in(["offensive", "hate"]),
+        AnalysisHistory.predicted_label.in_(["offensive", "hate"]),
         AnalysisHistory.timestamp >= week_ago
     ).count()
 
@@ -214,7 +237,7 @@ def get_moderator_stats():
 def home():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard' if current_user.role == 'user' else 'moderator_dashboard'))
-    return render_template('index.html')
+    return render_template('index.html', google_auth_enabled=GOOGLE_AUTH_ENABLED)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -250,7 +273,7 @@ def register():
             flash("Verification code sent. Please check your email.", "info")
 
         return redirect(url_for("verify", username=username))
-    return render_template("register.html")
+    return render_template("register.html", google_auth_enabled=GOOGLE_AUTH_ENABLED)
 
 @app.route('/verify/<username>', methods=['GET', 'POST'])
 def verify(username):
@@ -297,7 +320,7 @@ def login():
             login_user(user)
             return redirect(url_for("moderator_dashboard" if user.role == "moderator" else "dashboard"))
         flash("Invalid credentials", "danger")
-    return render_template("login.html")
+    return render_template("login.html", google_auth_enabled=GOOGLE_AUTH_ENABLED)
 
 @app.route('/logout')
 @login_required
@@ -315,7 +338,6 @@ def dashboard():
     result, explanation_words, raw_text = None, [], ""
 
     if request.method == 'POST':
-        print(request.form)  # Debug
         raw_text = request.form.get('tweet', '').strip()
         if not raw_text:
             flash("Please enter text to analyze.", "warning")
@@ -339,7 +361,8 @@ def dashboard():
             user_id=current_user.id,
             tweet_text=raw_text,
             predicted_label=label,
-            explanation_words=", ".join(explanation_words)
+            explanation_words=", ".join(explanation_words),
+            source="web"
         ))
         db.session.commit()
         result = label
@@ -387,12 +410,14 @@ def export_flagged():
     response.headers['Content-Type'] = 'text/csv'
     return response
 
-# FIXED: Google OAuth callback route
-@app.route('/login/google/authorized')
-def google_authorized():
-    if not google.authorized:
-        flash("Failed to log in with Google.", "danger")
+@app.route('/login/google')
+def login_google():
+    if not GOOGLE_AUTH_ENABLED:
+        flash("Google authentication is not configured.", "danger")
         return redirect(url_for('login'))
+        
+    if not google.authorized:
+        return redirect(url_for('google.login'))
 
     resp = google.get("/oauth2/v2/userinfo")
     if not resp.ok:
@@ -405,22 +430,13 @@ def google_authorized():
     # Check if user exists
     user = User.query.filter_by(email=email).first()
     if not user:
-        # New user: register with OAuth
-        username = email.split("@")[0]
-        # Make username unique if it already exists
-        counter = 1
-        original_username = username
-        while User.query.filter_by(username=username).first():
-            username = f"{original_username}{counter}"
-            counter += 1
-            
+        # New user: register
         user = User(
             full_name=info.get("name", email.split("@")[0]),
-            username=username,
+            username=email.split("@")[0] + "_" + str(random.randint(1000, 9999)),  # Ensure unique username
             email=email,
-            password_hash=None,  # No password for OAuth users
-            is_verified=True,    # OAuth users are pre-verified
-            role="user"
+            is_verified=True,
+            oauth_provider="google"
         )
         db.session.add(user)
         db.session.commit()
@@ -430,7 +446,7 @@ def google_authorized():
     return redirect(url_for("dashboard" if user.role == "user" else "moderator_dashboard"))
 
 @app.route('/api/analyze', methods=['POST'])
-@login_required  # Requires the mod/user to be logged in
+@login_required  # Requires the user to be logged in
 def api_analyze():
     if not request.json or 'text' not in request.json:
         return jsonify({'error': 'Missing text'}), 400
@@ -449,17 +465,65 @@ def api_analyze():
     explanation_words = [feature_names[i] for i in top_indices if vec.toarray()[0][i] > 0]
 
     db.session.add(AnalysisHistory(
-        user_id=current_user.id if current_user.is_authenticated else None,
+        user_id=current_user.id,
         tweet_text=raw_text,
         predicted_label=label,
-        explanation_words=", ".join(explanation_words)
+        explanation_words=", ".join(explanation_words),
+        source="api"
     ))
     db.session.commit()
 
     return jsonify({
-        'label': label,
+        'prediction': label,
         'explanation': explanation_words
     })
+
+# Public API endpoint for extension (no login required)
+@app.route('/api/analyze/public', methods=['POST'])
+def api_analyze_public():
+    if not request.json or 'text' not in request.json:
+        return jsonify({'error': 'Missing text'}), 400
+
+    raw_text = request.json['text']
+    
+    # Basic validation
+    if len(raw_text.strip()) == 0:
+        return jsonify({'error': 'Empty text'}), 400
+    
+    if len(raw_text) > 1000:  # Limit text length
+        return jsonify({'error': 'Text too long (max 1000 characters)'}), 400
+
+    try:
+        cleaned = preprocess_text(raw_text)
+        vec = vectorizer.transform([cleaned])
+        pred = model.predict(vec)[0]
+        label = label_encoder.inverse_transform([pred])[0]
+
+        # Explanation (top 5 influential words)
+        feature_names = vectorizer.get_feature_names_out()
+        coefs = model.coef_[int(pred)]
+        word_weights = vec.toarray()[0] * coefs
+        top_indices = np.argsort(word_weights)[::-1][:5]
+        explanation_words = [feature_names[i] for i in top_indices if vec.toarray()[0][i] > 0]
+
+        # Log anonymous usage
+        db.session.add(AnalysisHistory(
+            user_id=None,  # Anonymous
+            tweet_text=raw_text,
+            predicted_label=label,
+            explanation_words=", ".join(explanation_words),
+            source="extension"
+        ))
+        db.session.commit()
+
+        return jsonify({
+            'prediction': label,
+            'explanation': explanation_words,
+            'status': 'success'
+        })
+    except Exception as e:
+        logging.error(f"Error in public API: {e}")
+        return jsonify({'error': 'Analysis failed'}), 500
 
 if __name__ == "__main__":
     with app.app_context():
