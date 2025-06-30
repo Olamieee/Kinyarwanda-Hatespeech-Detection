@@ -1,3 +1,4 @@
+// Updated popup.js - Replace your current popup.js with this
 document.getElementById('analyzeBtn').addEventListener('click', async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   
@@ -19,9 +20,9 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
 
     document.getElementById('result').textContent = "🔄 Analyzing...";
 
-    const response = await fetch('https://kinyarwanda-hatespeech-detection.onrender.com/api/analyze', {
+    // Use the public endpoint that doesn't require authentication
+    const response = await fetch('https://kinyarwanda-hatespeech-detection.onrender.com/api/analyze/public', {
       method: 'POST',
-      credentials: 'include',
       headers: {
         'Content-Type': 'application/json'
       },
@@ -33,11 +34,18 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
     }
 
     const result = await response.json();
+    
+    // Handle potential error response
+    if (result.error) {
+      throw new Error(result.error);
+    }
+    
     document.getElementById('result').innerHTML = `
       <strong>Prediction:</strong> <span class="${result.prediction === 'normal' ? 'safe' : 'flagged'}">${result.prediction}</span><br>
       <strong>Top Words:</strong> ${result.explanation.join(', ')}
     `;
   } catch (err) {
+    console.error('Analysis error:', err);
     document.getElementById('result').textContent = "❌ Error: " + err.message;
   }
 });

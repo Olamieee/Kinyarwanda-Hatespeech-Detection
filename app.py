@@ -14,6 +14,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_dance.contrib.google import make_google_blueprint, google
 from flask_cors import CORS
+from flask import Blueprint
 
 # Load environment variables first
 load_dotenv()
@@ -157,6 +158,16 @@ if GOOGLE_AUTH_ENABLED:
         redirect_url='/login/google/authorized',
         scope=["profile", "email"]
     )
+    app.register_blueprint(google_bp, url_prefix="/login")
+else:
+    # Create a dummy blueprint to prevent template errors
+    google_bp = Blueprint('google', __name__)
+    
+    @google_bp.route('/login')
+    def login():
+        flash("Google authentication is not configured.", "danger")
+        return redirect(url_for('login'))
+    
     app.register_blueprint(google_bp, url_prefix="/login")
 
 # Rate limiting
