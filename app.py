@@ -425,8 +425,13 @@ def login():
 @login_required
 def logout():
     logout_user()
+    
+    # Clear any existing flash messages
+    session.pop('_flashes', None)
+    
     flash("Logged out successfully.", "info")
     return redirect(url_for("login"))
+
 
 # New Google OAuth Routes
 @app.route('/auth/google')
