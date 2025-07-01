@@ -61,7 +61,7 @@
       font-size: 0.9rem;
     }
 
-    .flash.error {
+    .flash.error, .flash.danger {
       background: #fef2f2;
       color: #dc2626;
       border: 1px solid #fecaca;
@@ -71,6 +71,18 @@
       background: #f0fdf4;
       color: #059669;
       border: 1px solid #bbf7d0;
+    }
+
+    .flash.info {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+
+    .flash.warning {
+      background: #fffbeb;
+      color: #d97706;
+      border: 1px solid #fed7aa;
     }
 
     form {
@@ -190,6 +202,10 @@
       margin-bottom: 1.5rem;
     }
 
+    .google-register-form {
+      margin-bottom: 1rem;
+    }
+
     .google-register-btn {
       display: flex;
       align-items: center;
@@ -200,9 +216,9 @@
       border: 1px solid #d1d5db;
       border-radius: 8px;
       color: #374151;
-      text-decoration: none;
       font-size: 1rem;
       font-weight: 500;
+      cursor: pointer;
       transition: all 0.3s ease;
       position: relative;
       overflow: hidden;
@@ -265,6 +281,21 @@
       text-decoration: underline;
     }
 
+    .google-auth-disabled {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 0.875rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .google-auth-disabled p {
+      color: #6b7280;
+      font-size: 0.875rem;
+      margin: 0;
+    }
+
     @media (max-width: 480px) {
       .register-container {
         padding: 1.5rem;
@@ -317,16 +348,36 @@
 
     {% if google_auth_enabled %}
     <div class="google-auth-section">
-      <a href="{{ url_for('google.login') }}" class="google-register-btn">
-        <div class="google-icon"></div>
-        Sign up with Google
-      </a>
+      <div class="auth-note">
+        <p>Quick signup with Google - choose your role and sign up instantly!</p>
+      </div>
+      
+      <form method="POST" action="{{ url_for('auth_google_register') }}" class="google-register-form">
+        <div class="role-section">
+          <label>Account Type for Google Registration</label>
+          <div class="role-options">
+            <div class="role-option">
+              <input type="radio" id="google_user" name="role" value="user" checked>
+              <label for="google_user">Regular User</label>
+            </div>
+            <div class="role-option">
+              <input type="radio" id="google_moderator" name="role" value="moderator">
+              <label for="google_moderator">Content Moderator</label>
+            </div>
+          </div>
+        </div>
+        
+        <button type="submit" class="google-register-btn">
+          <div class="google-icon"></div>
+          Sign up with Google
+        </button>
+      </form>
+    </div>
+    {% else %}
+    <div class="google-auth-disabled">
+      <p>Google authentication is currently unavailable</p>
     </div>
     {% endif %}
-
-    <div class="auth-note">
-      <p>Quick signup with Google - no forms to fill!</p>
-    </div>
 
     <div class="divider">or create manually</div>
 
@@ -373,5 +424,4 @@
     </div>
   </div>
 </body>
-
 </html>

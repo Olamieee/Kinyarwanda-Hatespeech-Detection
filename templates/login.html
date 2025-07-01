@@ -61,7 +61,7 @@
       font-size: 0.9rem;
     }
 
-    .flash.error {
+    .flash.error, .flash.danger {
       background: #fef2f2;
       color: #dc2626;
       border: 1px solid #fecaca;
@@ -71,6 +71,18 @@
       background: #f0fdf4;
       color: #059669;
       border: 1px solid #bbf7d0;
+    }
+
+    .flash.info {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+
+    .flash.warning {
+      background: #fffbeb;
+      color: #d97706;
+      border: 1px solid #fed7aa;
     }
 
     form {
@@ -189,6 +201,21 @@
       background-size: contain;
     }
 
+    .google-auth-disabled {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 0.875rem;
+      margin: 1.5rem 0;
+      text-align: center;
+    }
+
+    .google-auth-disabled p {
+      color: #6b7280;
+      font-size: 0.875rem;
+      margin: 0;
+    }
+
     .register-link {
       text-align: center;
       margin-top: 1.5rem;
@@ -250,15 +277,14 @@
 
     {% if google_auth_enabled %}
     <div class="google-auth-section">
-      <a href="{{ url_for('google.login') }}" class="google-login-btn">
+      <a href="{{ url_for('auth_google') }}" class="google-login-btn">
         <div class="google-icon"></div>
         Continue with Google
       </a>
     </div>
     {% else %}
-    <!-- Optional: Show a message when Google auth is disabled -->
     <div class="google-auth-disabled">
-      <p class="text-muted">Google authentication is currently unavailable</p>
+      <p>Google authentication is currently unavailable</p>
     </div>
     {% endif %}
 
@@ -283,5 +309,4 @@
     </div>
   </div>
 </body>
-
 </html>

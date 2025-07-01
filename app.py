@@ -488,11 +488,14 @@ def auth_google_callback():
         flash("Incomplete user information from Google.", "danger")
         return redirect(url_for('login'))
     
+    # Get role from session (set during registration flow)
+    pending_role = session.pop('pending_role', 'user')
+    
     # Check if user exists
     user = User.query.filter_by(email=email).first()
     
     if not user:
-        # Create new user
+        # Create new user with the selected role
         username_base = email.split("@")[0]
         username = username_base
         counter = 1
@@ -506,17 +509,21 @@ def auth_google_callback():
             email=email,
             is_verified=True,  # Google accounts are pre-verified
             oauth_provider="google",
-            google_id=google_id
+            google_id=google_id,
+            role=pending_role  # Use the role from session
         )
         db.session.add(user)
         db.session.commit()
-        flash("Account created successfully with Google!", "success")
+        flash(f"Account created successfully with Google as {pending_role}!", "success")
     else:
         # Update existing user with Google info if not already set
         if not user.google_id:
             user.google_id = google_id
             user.oauth_provider = "google"
             user.is_verified = True
+            # Optionally update role if it was pending
+            if pending_role != 'user':
+                user.role = pending_role
             db.session.commit()
     
     # Log the user in
@@ -524,6 +531,25 @@ def auth_google_callback():
     
     flash("Logged in with Google!", "success")
     return redirect(url_for("dashboard" if user.role == "user" else "moderator_dashboard"))
+
+@app.route('/auth/google/register', methods=['POST'])
+def auth_google_register():
+    """Store role selection in session before Google OAuth"""
+    if not GOOGLE_AUTH_ENABLED:
+        flash("Google authentication is not configured.", "danger")
+        return redirect(url_for('register'))
+    
+    # Store the selected role in session
+    role = request.form.get('role', 'user')
+    session['pending_role'] = role
+    
+    # Redirect to Google OAuth
+    auth_url = get_google_auth_url()
+    if not auth_url:
+        flash("Failed to generate Google auth URL.", "danger")
+        return redirect(url_for('register'))
+    
+    return redirect(auth_url)
 
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
