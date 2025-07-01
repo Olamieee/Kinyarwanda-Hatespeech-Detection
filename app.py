@@ -4,7 +4,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Message, Mail
 from datetime import datetime, timedelta
-import joblib, re, random, string, time, secrets
+import joblib, re, random, string, time, secrets, requests
 import numpy as np
 from sqlalchemy import func
 import logging
@@ -12,9 +12,10 @@ from dotenv import load_dotenv
 import os
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_dance.contrib.google import make_google_blueprint, google
 from flask_cors import CORS
-from flask import Blueprint
+from flask_session import Session
+import urllib.parse
+import json
 
 # Load environment variables first
 load_dotenv()
@@ -33,15 +34,27 @@ if not SECRET_KEY:
     logging.warning(f"For production, set SECRET_KEY={SECRET_KEY}")
 
 app.secret_key = SECRET_KEY
+app.config['SESSION_TYPE'] = 'filesystem'
+Session(app)
 
-# Enable CORS for the extension
-CORS(app, supports_credentials=True, origins=["chrome-extension://*"])
+# Session configuration - CRITICAL for OAuth
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('RENDER') is not None  # True in production
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
+
+# Enable CORS for the extension with proper session support
+CORS(app, 
+     supports_credentials=True, 
+     origins=["chrome-extension://*"],
+     allow_headers=["Content-Type", "Authorization"],
+     expose_headers=["Set-Cookie"])
 
 # Rate limiter
 limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=["10 per minute"]
+    default_limits=["100 per minute"]
 )
 
 # Check Google OAuth credentials EARLY
@@ -61,16 +74,18 @@ def get_base_url():
     """Get base URL based on environment"""
     if os.getenv('RENDER'):
         return f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}"
-    # For local development, use HTTP (we'll handle the insecure transport)
+    # For local development
     return os.getenv('BASE_URL', 'http://127.0.0.1:5000')
 
 BASE_URL = get_base_url()
 logging.info(f"Using base URL: {BASE_URL}")
 
-# IMPORTANT: Allow insecure transport for local development
-if not os.getenv('RENDER'):  # Only for local development
-    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-    logging.info("Insecure transport enabled for local development")
+# Google OAuth Configuration
+GOOGLE_OAUTH_SCOPES = [
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'openid'
+]
 
 # Mail Configuration
 app.config['MAIL_SERVER'] = 'smtp.sendgrid.net'
@@ -84,26 +99,13 @@ mail = Mail(app)
 
 # Database config
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # Login setup
 login_manager = LoginManager()
 login_manager.login_view = "login"
 login_manager.init_app(app)
-
-# Google OAuth setup - FIXED VERSION
-if GOOGLE_AUTH_ENABLED:
-    # Use the exact scope format that Google returns
-    google_bp = make_google_blueprint(
-        client_id=GOOGLE_CLIENT_ID,
-        client_secret=GOOGLE_CLIENT_SECRET,
-        redirect_url=f'{BASE_URL}/login/google/authorized',
-        scope=["https://www.googleapis.com/auth/userinfo.profile", 
-               "https://www.googleapis.com/auth/userinfo.email", 
-               "openid"]
-    )
-    app.register_blueprint(google_bp, url_prefix="/login")
-    logging.info(f"Google OAuth redirect URL: {BASE_URL}/login/google/authorized")
 
 # Stopwords
 kinyarwanda_stopwords = {
@@ -127,6 +129,7 @@ class User(UserMixin, db.Model):
     verification_code = db.Column(db.String(10), nullable=True)
     role = db.Column(db.String(20), default="user")
     oauth_provider = db.Column(db.String(50), nullable=True)  # Track OAuth provider
+    google_id = db.Column(db.String(100), nullable=True)  # Store Google user ID
 
 class AnalysisHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -190,6 +193,70 @@ If you didn't request this, you can safely ignore this message.
     except Exception as e:
         logging.error(f"Failed to send verification email: {e}")
         return False
+
+# Google OAuth Helper Functions
+def get_google_auth_url():
+    """Generate Google OAuth authorization URL"""
+    if not GOOGLE_AUTH_ENABLED:
+        return None
+    
+    params = {
+        'client_id': GOOGLE_CLIENT_ID,
+        'redirect_uri': f"{BASE_URL}/auth/google/callback",
+        'scope': ' '.join(GOOGLE_OAUTH_SCOPES),
+        'response_type': 'code',
+        'access_type': 'offline',
+        'state': secrets.token_urlsafe(32)  # CSRF protection
+    }
+    
+    # Store state in session for verification
+    session['oauth_state'] = params['state']
+    
+    auth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' + urllib.parse.urlencode(params)
+    return auth_url
+
+def exchange_code_for_token(code, state):
+    """Exchange authorization code for access token"""
+    if not GOOGLE_AUTH_ENABLED:
+        return None
+    
+    # Verify state parameter (CSRF protection)
+    if state != session.get('oauth_state'):
+        logging.error("OAuth state mismatch")
+        return None
+    
+    # Clear the state from session
+    session.pop('oauth_state', None)
+    
+    token_url = 'https://oauth2.googleapis.com/token'
+    token_data = {
+        'client_id': GOOGLE_CLIENT_ID,
+        'client_secret': GOOGLE_CLIENT_SECRET,
+        'code': code,
+        'redirect_uri': f"{BASE_URL}/auth/google/callback",
+        'grant_type': 'authorization_code'
+    }
+    
+    try:
+        response = requests.post(token_url, data=token_data)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        logging.error(f"Error exchanging code for token: {e}")
+        return None
+
+def get_google_user_info(access_token):
+    """Get user info from Google using access token"""
+    user_info_url = 'https://www.googleapis.com/oauth2/v2/userinfo'
+    headers = {'Authorization': f'Bearer {access_token}'}
+    
+    try:
+        response = requests.get(user_info_url, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        logging.error(f"Error fetching user info: {e}")
+        return None
 
 # Rate limiting
 user_last_requests = {}
@@ -271,12 +338,6 @@ def home():
         return redirect(url_for('dashboard' if current_user.role == 'user' else 'moderator_dashboard'))
     return render_template('index.html', google_auth_enabled=GOOGLE_AUTH_ENABLED)
 
-@app.route('/register/google')
-def register_google():
-    """Same as login with Google - OAuth handles both cases"""
-    return login_google()
-
-# Update your register route to show Google option
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -312,7 +373,6 @@ def register():
 
         return redirect(url_for("verify", username=username))
     return render_template("register.html", google_auth_enabled=GOOGLE_AUTH_ENABLED)
-
 
 @app.route('/verify/<username>', methods=['GET', 'POST'])
 def verify(username):
@@ -367,6 +427,103 @@ def logout():
     logout_user()
     flash("Logged out successfully.", "info")
     return redirect(url_for("login"))
+
+# New Google OAuth Routes
+@app.route('/auth/google')
+def auth_google():
+    """Initiate Google OAuth"""
+    if not GOOGLE_AUTH_ENABLED:
+        flash("Google authentication is not configured.", "danger")
+        return redirect(url_for('login'))
+    
+    auth_url = get_google_auth_url()
+    if not auth_url:
+        flash("Failed to generate Google auth URL.", "danger")
+        return redirect(url_for('login'))
+    
+    return redirect(auth_url)
+
+@app.route('/auth/google/callback')
+def auth_google_callback():
+    """Handle Google OAuth callback"""
+    if not GOOGLE_AUTH_ENABLED:
+        flash("Google authentication is not configured.", "danger")
+        return redirect(url_for('login'))
+    
+    # Get authorization code and state from query parameters
+    code = request.args.get('code')
+    state = request.args.get('state')
+    error = request.args.get('error')
+    
+    if error:
+        flash(f"Google authentication failed: {error}", "danger")
+        return redirect(url_for('login'))
+    
+    if not code:
+        flash("No authorization code received from Google.", "danger")
+        return redirect(url_for('login'))
+    
+    # Exchange code for token
+    token_data = exchange_code_for_token(code, state)
+    if not token_data:
+        flash("Failed to get access token from Google.", "danger")
+        return redirect(url_for('login'))
+    
+    access_token = token_data.get('access_token')
+    if not access_token:
+        flash("No access token received from Google.", "danger")
+        return redirect(url_for('login'))
+    
+    # Get user info
+    user_info = get_google_user_info(access_token)
+    if not user_info:
+        flash("Failed to get user information from Google.", "danger")
+        return redirect(url_for('login'))
+    
+    email = user_info.get('email')
+    google_id = user_info.get('id')
+    name = user_info.get('name', '')
+    
+    if not email or not google_id:
+        flash("Incomplete user information from Google.", "danger")
+        return redirect(url_for('login'))
+    
+    # Check if user exists
+    user = User.query.filter_by(email=email).first()
+    
+    if not user:
+        # Create new user
+        username_base = email.split("@")[0]
+        username = username_base
+        counter = 1
+        while User.query.filter_by(username=username).first():
+            username = f"{username_base}_{counter}"
+            counter += 1
+        
+        user = User(
+            full_name=name or username,
+            username=username,
+            email=email,
+            is_verified=True,  # Google accounts are pre-verified
+            oauth_provider="google",
+            google_id=google_id
+        )
+        db.session.add(user)
+        db.session.commit()
+        flash("Account created successfully with Google!", "success")
+    else:
+        # Update existing user with Google info if not already set
+        if not user.google_id:
+            user.google_id = google_id
+            user.oauth_provider = "google"
+            user.is_verified = True
+            db.session.commit()
+    
+    # Log the user in
+    login_user(user, remember=True)
+    
+    flash("Logged in with Google!", "success")
+    return redirect(url_for("dashboard" if user.role == "user" else "moderator_dashboard"))
 
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
@@ -449,86 +606,6 @@ def export_flagged():
     response.headers['Content-Type'] = 'text/csv'
     return response
 
-@app.route('/login/google')
-def login_google():
-    if not GOOGLE_AUTH_ENABLED:
-        flash("Google authentication is not configured.", "danger")
-        return redirect(url_for('login'))
-        
-    return redirect(url_for('google.login'))
-
-# FIXED OAuth callback handler with proper error handling
-@app.route('/login/google/authorized')
-def login_google_authorized():
-    if not GOOGLE_AUTH_ENABLED:
-        flash("Google authentication is not configured.", "danger")
-        return redirect(url_for('login'))
-        
-    try:
-        # Check if authorization was successful
-        if not google.authorized:
-            flash("Failed to log in with Google.", "danger")
-            logging.error("Google OAuth not authorized")
-            return redirect(url_for('login'))
-
-        # Get user info from Google
-        resp = google.get("/oauth2/v2/userinfo")
-        if not resp.ok:
-            flash("Failed to fetch info from Google.", "danger")
-            logging.error(f"Failed to get user info from Google: {resp.status_code}")
-            return redirect(url_for('login'))
-
-        info = resp.json()
-        email = info.get("email")
-        
-        if not email:
-            flash("Failed to get email from Google.", "danger")
-            logging.error("No email received from Google")
-            return redirect(url_for('login'))
-        
-        logging.info(f"Google OAuth successful for email: {email}")
-
-        # Check if user exists
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            # New user: register automatically
-            base_username = email.split("@")[0]
-            username = base_username
-            counter = 1
-            
-            # Ensure unique username
-            while User.query.filter_by(username=username).first():
-                username = f"{base_username}_{counter}"
-                counter += 1
-            
-            user = User(
-                full_name=info.get("name", email.split("@")[0]),
-                username=username,
-                email=email,
-                is_verified=True,
-                oauth_provider="google",
-                role="user"  # Default role
-            )
-            db.session.add(user)
-            db.session.commit()
-            flash("Account created and logged in with Google!", "success")
-            logging.info(f"New user created via Google OAuth: {email}")
-        else:
-            # Update OAuth provider if not set
-            if not user.oauth_provider:
-                user.oauth_provider = "google"
-                db.session.commit()
-            flash("Logged in with Google!", "success")
-            logging.info(f"Existing user logged in via Google OAuth: {email}")
-
-        login_user(user)
-        return redirect(url_for("dashboard" if user.role == "user" else "moderator_dashboard"))
-
-    except Exception as e:
-        logging.error(f"Google OAuth error: {e}")
-        flash("An error occurred during Google authentication.", "danger")
-        return redirect(url_for('login'))
-
 @app.route('/api/analyze', methods=['POST'])
 @login_required  # Requires the user to be logged in
 def api_analyze():
@@ -563,6 +640,8 @@ def api_analyze():
     })
 
 # Public API endpoint for extension (no login required)
+# Replace your api_analyze_public function with this debug version
+
 @app.route('/api/analyze/public', methods=['POST'])
 def api_analyze_public():
     if not request.json or 'text' not in request.json:
@@ -579,9 +658,26 @@ def api_analyze_public():
 
     try:
         cleaned = preprocess_text(raw_text)
+        print(f"DEBUG - Raw text: {raw_text}")
+        print(f"DEBUG - Cleaned text: {cleaned}")
+        
         vec = vectorizer.transform([cleaned])
+        print(f"DEBUG - Vector shape: {vec.shape}")
+        
         pred = model.predict(vec)[0]
+        print(f"DEBUG - Model prediction (numeric): {pred}")
+        print(f"DEBUG - Prediction type: {type(pred)}")
+        
+        # Check what classes your label encoder knows about
+        print(f"DEBUG - Label encoder classes: {label_encoder.classes_}")
+        
         label = label_encoder.inverse_transform([pred])[0]
+        print(f"DEBUG - Final label: {label}")
+
+        # Get prediction probabilities for debugging
+        proba = model.predict_proba(vec)[0]
+        print(f"DEBUG - Prediction probabilities: {proba}")
+        print(f"DEBUG - Max probability: {max(proba)} at index: {np.argmax(proba)}")
 
         # Explanation (top 5 influential words)
         feature_names = vectorizer.get_feature_names_out()
@@ -603,13 +699,26 @@ def api_analyze_public():
         return jsonify({
             'prediction': label,
             'explanation': explanation_words,
-            'status': 'success'
+            'status': 'success',
+            'debug': {
+                'numeric_prediction': int(pred),
+                'probabilities': proba.tolist(),
+                'cleaned_text': cleaned
+            }
         })
     except Exception as e:
         logging.error(f"Error in public API: {e}")
-        return jsonify({'error': 'Analysis failed'}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Analysis failed: {str(e)}'}), 500
+
+@app.route("/clear-session")
+def clear_session():
+    session.clear()
+    return "Session cleared!"
 
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
+        logging.info("Database tables created successfully")
     app.run(debug=True)

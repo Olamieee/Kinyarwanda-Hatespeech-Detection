@@ -1,4 +1,3 @@
-// Updated popup.js - Replace your current popup.js with this
 document.getElementById('analyzeBtn').addEventListener('click', async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   
@@ -20,20 +19,48 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
 
     document.getElementById('result').textContent = "🔄 Analyzing...";
 
-    // Use the public endpoint that doesn't require authentication
-    const response = await fetch('https://kinyarwanda-hatespeech-detection.onrender.com/api/analyze/public', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ text: selectedText })
-    });
+    // Smart server detection
+    const servers = [
+      'http://127.0.0.1:5000',  // Local development
+      'http://localhost:5000',   // Alternative local
+      'https://kinyarwanda-hatespeech-detection.onrender.com'  // Production
+    ];
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    let result = null;
+    let lastError = null;
+
+    for (const serverUrl of servers) {
+      try {
+        console.log(`Trying server: ${serverUrl}`);
+        
+        const response = await fetch(`${serverUrl}/api/analyze/public`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ text: selectedText }),
+          // Add timeout for faster fallback
+          signal: AbortSignal.timeout(5000) // 5 second timeout
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        result = await response.json();
+        console.log(`Successfully connected to: ${serverUrl}`);
+        break; // Success! Exit the loop
+
+      } catch (err) {
+        console.log(`Failed to connect to ${serverUrl}:`, err.message);
+        lastError = err;
+        continue; // Try next server
+      }
     }
 
-    const result = await response.json();
+    if (!result) {
+      throw new Error(`All servers failed. Last error: ${lastError?.message || 'Unknown error'}`);
+    }
     
     // Handle potential error response
     if (result.error) {
