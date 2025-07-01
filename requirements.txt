@@ -12,3 +12,5 @@ scikit-learn
 Flask-Dance
 flask-limiter
 flask_cors
+flask_session
+authlib
