@@ -242,10 +242,10 @@
     {% endfor %}
     {% endwith %}
 
-    <form method="POST">
+    <form method="POST" id="verify-form">
       <div>
         <label>Verification Code</label>
-        <input type="text" name="code" placeholder="Enter 7-digit code" maxlength="7" required />
+        <input type="text" name="code" placeholder="Enter 7-digit code" maxlength="7" required autocomplete="off" />
       </div>
       <button type="submit" class="btn btn-primary">Verify Account</button>
     </form>
@@ -260,6 +260,22 @@
       </form>
     </div>
   </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const form = document.getElementById('verify-form');
+      const codeInput = document.querySelector('input[name="code"]');
+
+      // Auto-submit when 7 characters are entered
+      codeInput.addEventListener('input', function () {
+        if (this.value.length === 7) {
+          form.submit();
+        }
+      });
+
+      // Focus on the input when page loads
+      codeInput.focus();
+    });
+  </script>
 </body>
 
 </html>

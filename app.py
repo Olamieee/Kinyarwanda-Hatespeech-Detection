@@ -375,6 +375,7 @@ def register():
     return render_template("register.html", google_auth_enabled=GOOGLE_AUTH_ENABLED)
 
 @app.route('/verify/<username>', methods=['GET', 'POST'])
+@app.route('/verify/<username>', methods=['GET', 'POST'])
 def verify(username):
     user = User.query.filter_by(username=username).first_or_404()
 
@@ -388,10 +389,19 @@ def verify(username):
                 user.is_verified = True
                 user.verification_code = None
                 db.session.commit()
-                flash("Account verified. You may now login.", "success")
-                return redirect(url_for("login"))
+                
+                # Automatically log in the user after successful verification
+                login_user(user)
+                
+                flash("Account verified successfully! Welcome to RHD.", "success")
+                
+                # Redirect to appropriate dashboard based on role
+                if user.role == "moderator":
+                    return redirect(url_for("moderator_dashboard"))
+                else:
+                    return redirect(url_for("dashboard"))
             else:
-                flash("Incorrect code.", "danger")
+                flash("Incorrect verification code. Please try again.", "danger")
         elif 'resend' in request.form and can_resend:
             new_code = generate_code()
             user.verification_code = new_code
@@ -414,11 +424,20 @@ def login():
         user = User.query.filter_by(username=request.form['username']).first()
         if user and user.password_hash and check_password_hash(user.password_hash, request.form['password']):
             if not user.is_verified:
-                flash("Verify your email first.", "warning")
+                flash("Please verify your email first.", "warning")
                 return redirect(url_for("verify", username=user.username))
+            
             login_user(user)
-            return redirect(url_for("moderator_dashboard" if user.role == "moderator" else "dashboard"))
-        flash("Invalid credentials", "danger")
+            flash("Logged in successfully!", "success")
+            
+            # Redirect based on role
+            if user.role == "moderator":
+                return redirect(url_for("moderator_dashboard"))
+            else:
+                return redirect(url_for("dashboard"))
+        else:
+            flash("Invalid username or password. Please try again.", "danger")
+    
     return render_template("login.html", google_auth_enabled=GOOGLE_AUTH_ENABLED)
 
 @app.route('/logout')
