@@ -1,5 +1,6 @@
 .env
 flask_session/
-login.html
-register.html
-app2.py
+model/hate_speech_kinyarwanda_synthetic_mixed.csv
+model/generated_kinyarwanda_hatespeech.csv
+model/kinyarwanda_hate_speech_preprocessed.csv
+model/kinyarwanda_hate_speech_preprocessed2.csv
