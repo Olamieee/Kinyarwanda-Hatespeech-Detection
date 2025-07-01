@@ -1,8 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
   <title>Dashboard - Kinyarwanda Hate Speech Detection</title>
   <style>
     * {
@@ -10,7 +15,7 @@
       padding: 0;
       box-sizing: border-box;
     }
-    
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       line-height: 1.6;
@@ -18,13 +23,13 @@
       background: #ffffff;
       min-height: 100vh;
     }
-    
+
     .container {
       max-width: 1200px;
       margin: 0 auto;
       padding: 0 1rem;
     }
-    
+
     /* Mobile-first responsive design */
     @media (min-width: 640px) {
       .container {
@@ -316,16 +321,16 @@
         flex-direction: column;
         text-align: center;
       }
-      
+
       .welcome-text {
         font-size: 1.25rem;
       }
-      
+
       .analysis-section,
       .history-section {
         padding: 1.5rem;
       }
-      
+
       .section-title {
         font-size: 1.25rem;
       }
@@ -333,8 +338,15 @@
 
     /* Animations */
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .result-section {
@@ -357,6 +369,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="header">
     <div class="container">
@@ -373,20 +386,16 @@
       <div class="analysis-section">
         <h2 class="section-title">🔍 Analyze Your Content</h2>
         <p class="section-description">
-          Enter your Kinyarwanda text below to analyze it for potential hate speech or offensive content. 
+          Enter your Kinyarwanda text below to analyze it for potential hate speech or offensive content.
           Our AI will provide instant results with detailed explanations.
         </p>
-        
+
         <form method="POST" id="analysisForm">
           <div class="form-group">
             <label for="text" class="form-label">Text to Analyze</label>
-            <textarea 
-              name="tweet" 
-              id="text" 
-              class="form-textarea" 
+            <textarea name="tweet" id="text" class="form-textarea"
               placeholder="Andika umwandiko wawe muri Kinyarwanda hano... (Write your Kinyarwanda text here...)"
-              required
-            >{{ tweet }}</textarea>
+              required>{{ tweet }}</textarea>
           </div>
           <button type="submit" class="analyze-btn" id="analyzeBtn">
             <span id="btnText">Analyze Text</span>
@@ -401,17 +410,17 @@
             {% if result == 'normal' %}prediction-safe{% else %}prediction-flagged{% endif %}">
             <span>
               {% if result == 'normal' %}
-                ✅ Safe Content
+              ✅ Safe Content
               {% elif result == 'offensive' %}
-                ⚠️ Offensive Content
+              ⚠️ Offensive Content
               {% elif result == 'hate' %}
-                🚫 Hate Speech Detected
+              🚫 Hate Speech Detected
               {% else %}
-                ⚠️ {{ result|title }}
+              ⚠️ {{ result|title }}
               {% endif %}
             </span>
           </div>
-          
+
           {% if explanation %}
           <div class="explanation-section">
             <div class="explanation-title">🔍 Key Words Identified:</div>
@@ -428,35 +437,35 @@
         <p class="section-description">
           Review your previous analyses and track patterns in your content over time.
         </p>
-        
+
         <div class="history-grid">
           {% if history %}
-            {% for item in history %}
-            <div class="history-item">
-              <div class="history-text">
-                "{{ item.tweet_text }}"
-              </div>
-              <div class="history-result">
-                <span class="history-label {{ 'label-safe' if item.predicted_label == 'normal' else 'label-flagged' }}">
-                  {% if item.predicted_label == 'normal' %}
-                    ✅ Safe Content
-                  {% elif item.predicted_label == 'offensive' %}
-                    ⚠️ Offensive Content
-                  {% elif item.predicted_label == 'hate' %}
-                    🚫 Hate Speech Detected
-                  {% else %}
-                    ⚠️ {{ item.predicted_label|title }}
-                  {% endif %}
-                </span>
-                
-              </div>
-              {% if item.explanation_words %}
-              <div class="history-explanation">
-                <strong>Key words:</strong> {{ item.explanation_words }}
-              </div>
-              {% endif %}
+          {% for item in history %}
+          <div class="history-item">
+            <div class="history-text">
+              "{{ item.tweet_text }}"
             </div>
-            {% endfor %}
+            <div class="history-result">
+              <span class="history-label {{ 'label-safe' if item.predicted_label == 'normal' else 'label-flagged' }}">
+                {% if item.predicted_label == 'normal' %}
+                ✅ Safe Content
+                {% elif item.predicted_label == 'offensive' %}
+                ⚠️ Offensive Content
+                {% elif item.predicted_label == 'hate' %}
+                🚫 Hate Speech Detected
+                {% else %}
+                ⚠️ {{ item.predicted_label|title }}
+                {% endif %}
+              </span>
+
+            </div>
+            {% if item.explanation_words %}
+            <div class="history-explanation">
+              <strong>Key words:</strong> {{ item.explanation_words }}
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
           {% else %}
           <div class="no-history">
             <p>No analysis history yet. Start by analyzing some text above!</p>
@@ -474,7 +483,7 @@
     const btnText = document.getElementById('btnText');
     const btnLoading = document.getElementById('btnLoading');
 
-    form.addEventListener('submit', function() {
+    form.addEventListener('submit', function () {
       btn.classList.add('loading');
       btnText.style.display = 'none';
       btnLoading.style.display = 'inline';
@@ -483,10 +492,11 @@
 
     // Auto-resize textarea
     const textarea = document.getElementById('text');
-    textarea.addEventListener('input', function() {
+    textarea.addEventListener('input', function () {
       this.style.height = 'auto';
       this.style.height = Math.max(120, this.scrollHeight) + 'px';
     });
   </script>
 </body>
+
 </html>
