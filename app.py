@@ -545,10 +545,12 @@ def auth_google_callback():
             user.google_id = google_id
             user.oauth_provider = "google"
             user.is_verified = True
-            # Optionally update role if it was pending
-            if pending_role != 'user':
-                user.role = pending_role
             db.session.commit()
+        else:
+            # Prevent role changes for existing users
+            if user.role != pending_role:
+                flash(f"You already signed up as a '{user.role}'. Contact support to change your role.", "warning")
+
     
     # Log the user in
     login_user(user, remember=True)
