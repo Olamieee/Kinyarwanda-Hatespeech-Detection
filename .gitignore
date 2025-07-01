@@ -1,2 +1,5 @@
 .env
 flask_session/
+login.html
+register.html
+app2.py
