@@ -10,6 +10,7 @@ from sqlalchemy import func
 import logging
 from dotenv import load_dotenv
 import os
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS
@@ -98,7 +99,7 @@ app.config['MAIL_DEFAULT_SENDER'] = 'longelee333@gmail.com'
 mail = Mail(app)
 
 # Database config
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///kinyaai.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -108,11 +109,15 @@ login_manager.login_view = "login"
 login_manager.init_app(app)
 
 # Stopwords
-kinyarwanda_stopwords = {
+kinyarwanda_stopwords = set([
     "na", "ku", "mu", "ya", "y'", "n'", "bya", "cyane", "rwose",
-    "kandi", "ubwo", "uko", "ntacyo", "ntukwiye", "ntacyo"
-}
+    "kandi", "ubwo", "uko", "ntacyo", "ntukwiye"
+])
 
+# Combine both sets
+combined_stopwords = kinyarwanda_stopwords.union(ENGLISH_STOP_WORDS)
+extra_stopwords = {"lol", "lmao", "smh", "bruh", "nah", "omg", "uhh", "hmm", "yo", "yup"}
+combined_stopwords = combined_stopwords.union(extra_stopwords)
 # Load model
 model = joblib.load('model/lr_model.pkl')
 vectorizer = joblib.load('model/tfidf.pkl')
@@ -151,7 +156,10 @@ def preprocess_text(text):
     text = re.sub(r'@\w+|http\S+|\d+', '', text)
     text = re.sub(r'[^\w\s]', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
-    return ' '.join([w for w in text.split() if w not in kinyarwanda_stopwords])
+    
+    words = text.split()
+    words = [word for word in words if word not in combined_stopwords]
+    return ' '.join(words)
 
 def generate_code(length=7):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
@@ -333,7 +341,7 @@ def get_moderator_stats():
     }
 
 @app.route('/')
-def home():
+def index():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard' if current_user.role == 'user' else 'moderator_dashboard'))
     return render_template('index.html', google_auth_enabled=GOOGLE_AUTH_ENABLED)
@@ -597,6 +605,7 @@ def dashboard():
 
         # Should output 0, 1, or 2
         label = label_encoder.inverse_transform([pred])[0]
+        print(f"Prediction: {label} (numeric: {pred})")
 
         # Explanation
         feature_names = vectorizer.get_feature_names_out()
