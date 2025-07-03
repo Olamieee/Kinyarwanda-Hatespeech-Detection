@@ -122,6 +122,8 @@ combined_stopwords = combined_stopwords.union(extra_stopwords)
 model = joblib.load('model/lr_model.pkl')
 vectorizer = joblib.load('model/tfidf.pkl')
 label_encoder = joblib.load('model/label_encoder.pkl')
+scaler = joblib.load('model/scaler.pkl')
+mlp_model = joblib.load('model/mlp_model.pkl')
 
 # Models
 class User(UserMixin, db.Model):
@@ -600,12 +602,25 @@ def dashboard():
             return redirect(url_for('dashboard'))
 
         cleaned = preprocess_text(raw_text)
+        print(f"DEBUG - Raw text: {raw_text}")
+        print(f"DEBUG - Cleaned text: {cleaned}")
+            
         vec = vectorizer.transform([cleaned])
-        pred = model.predict(vec)[0]
-
-        # Should output 0, 1, or 2
+        print(f"DEBUG - Vector shape: {vec.shape}")
+        scaled = scaler.transform(vec.toarray())
+        print(f"DEBUG - Scaled shape: {scaled.shape}")
+            
+            # Get prediction probabilities and use the class with highest probability
+        proba = model.predict_proba(scaled)[0]
+        pred = np.argmax(proba)
+            
+        print(f"DEBUG - Prediction probabilities: {proba}")
+        print(f"DEBUG - Max probability: {max(proba)} at index: {pred}")
+        print(f"DEBUG - Model prediction (numeric): {pred}")
+        print(f"DEBUG - Label encoder classes: {label_encoder.classes_}")
+            
         label = label_encoder.inverse_transform([pred])[0]
-        print(f"Prediction: {label} (numeric: {pred})")
+        print(f"DEBUG - Final label: {label}")
 
         # Explanation
         feature_names = vectorizer.get_feature_names_out()
@@ -675,9 +690,25 @@ def api_analyze():
 
     raw_text = request.json['text']
     cleaned = preprocess_text(raw_text)
+    print(f"DEBUG - Raw text: {raw_text}")
+    print(f"DEBUG - Cleaned text: {cleaned}")
+        
     vec = vectorizer.transform([cleaned])
-    pred = model.predict(vec)[0]
+    print(f"DEBUG - Vector shape: {vec.shape}")
+    scaled = scaler.transform(vec.toarray())
+    print(f"DEBUG - Scaled shape: {scaled.shape}")
+        
+        # Get prediction probabilities and use the class with highest probability
+    proba = model.predict_proba(scaled)[0]
+    pred = np.argmax(proba)
+        
+    print(f"DEBUG - Prediction probabilities: {proba}")
+    print(f"DEBUG - Max probability: {max(proba)} at index: {pred}")
+    print(f"DEBUG - Model prediction (numeric): {pred}")
+    print(f"DEBUG - Label encoder classes: {label_encoder.classes_}")
+        
     label = label_encoder.inverse_transform([pred])[0]
+    print(f"DEBUG - Final label: {label}")
 
     # Explanation (top 5 influential words)
     feature_names = vectorizer.get_feature_names_out()
@@ -724,21 +755,20 @@ def api_analyze_public():
         
         vec = vectorizer.transform([cleaned])
         print(f"DEBUG - Vector shape: {vec.shape}")
+        scaled = scaler.transform(vec.toarray())
+        print(f"DEBUG - Scaled shape: {scaled.shape}")
         
-        pred = model.predict(vec)[0]
+        # Get prediction probabilities and use the class with highest probability
+        proba = model.predict_proba(scaled)[0]
+        pred = np.argmax(proba)
+        
+        print(f"DEBUG - Prediction probabilities: {proba}")
+        print(f"DEBUG - Max probability: {max(proba)} at index: {pred}")
         print(f"DEBUG - Model prediction (numeric): {pred}")
-        print(f"DEBUG - Prediction type: {type(pred)}")
-        
-        # Check what classes your label encoder knows about
         print(f"DEBUG - Label encoder classes: {label_encoder.classes_}")
         
         label = label_encoder.inverse_transform([pred])[0]
         print(f"DEBUG - Final label: {label}")
-
-        # Get prediction probabilities for debugging
-        proba = model.predict_proba(vec)[0]
-        print(f"DEBUG - Prediction probabilities: {proba}")
-        print(f"DEBUG - Max probability: {max(proba)} at index: {np.argmax(proba)}")
 
         # Explanation (top 5 influential words)
         feature_names = vectorizer.get_feature_names_out()
