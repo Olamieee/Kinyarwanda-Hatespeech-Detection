@@ -17,6 +17,8 @@ from flask_cors import CORS
 from flask_session import Session
 import urllib.parse
 import json
+from lime.lime_text import LimeTextExplainer
+
 
 # Load environment variables first
 load_dotenv()
@@ -193,6 +195,50 @@ def preprocess_text(text):
     words = [word for word in words if word not in combined_stopwords]
     return ' '.join(words)
 
+def get_explanation_words_lime(text, model, vectorizer, scaler, top_n=5):
+    """Get explanation using LIME (Local Interpretable Model-agnostic Explanations)"""
+    def predict_proba_wrapper(texts):
+        """Wrapper function for LIME to use our model"""
+        predictions = []
+        for text in texts:
+            cleaned = preprocess_text(text)
+            vec = vectorizer.transform([cleaned])
+            scaled = scaler.transform(vec.toarray())
+            proba = model.predict_proba(scaled)[0]
+            predictions.append(proba)
+        return np.array(predictions)
+    
+    # Create LIME explainer - removed the 'mode' parameter
+    explainer = LimeTextExplainer(
+        class_names=label_encoder.classes_
+    )
+    
+    try:
+        # Generate explanation
+        explanation = explainer.explain_instance(
+            text, 
+            predict_proba_wrapper, 
+            num_features=top_n,
+            num_samples=1000  # Number of samples for LIME
+        )
+        
+        # Extract the most important words
+        explanation_words = []
+        for word, weight in explanation.as_list():
+            if weight > 0:  # Only positive weights (words that contribute to the prediction)
+                explanation_words.append(word)
+        
+        return explanation_words[:top_n]
+    
+    except Exception as e:
+        print(f"LIME explanation failed: {e}")
+        # Fallback to simple word extraction
+        cleaned = preprocess_text(text)
+        words = cleaned.split()
+        feature_names = vectorizer.get_feature_names_out()
+        vocab_words = [word for word in words if word in feature_names]
+        return list(dict.fromkeys(vocab_words))[:top_n]  # Remove duplicates
+        
 def generate_code(length=7):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
 def send_email_with_sendgrid(to_email, subject, html_content, text_content):
@@ -799,12 +845,8 @@ def dashboard():
         label = label_encoder.inverse_transform([pred])[0]
         print(f"DEBUG - Final label: {label}")
 
-        # Explanation
-        feature_names = vectorizer.get_feature_names_out()
-        coefs = model.coef_[pred]  # Use int directly
-        word_weights = vec.toarray()[0] * coefs
-        top_indices = np.argsort(word_weights)[::-1][:5]
-        explanation_words = [feature_names[i] for i in top_indices if vec.toarray()[0][i] > 0]
+        # LIME-based explanation
+        explanation_words = get_explanation_words_lime(raw_text, model, vectorizer, scaler)
 
         db.session.add(AnalysisHistory(
             user_id=current_user.id,
@@ -887,12 +929,8 @@ def api_analyze():
     label = label_encoder.inverse_transform([pred])[0]
     print(f"DEBUG - Final label: {label}")
 
-    # Explanation (top 5 influential words)
-    feature_names = vectorizer.get_feature_names_out()
-    coefs = model.coef_[int(pred)]
-    word_weights = vec.toarray()[0] * coefs
-    top_indices = np.argsort(word_weights)[::-1][:5]
-    explanation_words = [feature_names[i] for i in top_indices if vec.toarray()[0][i] > 0]
+    # LIME-based explanation
+    explanation_words = get_explanation_words_lime(raw_text, model, vectorizer, scaler)
 
     db.session.add(AnalysisHistory(
         user_id=current_user.id,
@@ -908,8 +946,6 @@ def api_analyze():
         'explanation': explanation_words
     })
 
-# Public API endpoint for extension (no login required)
-# Replace your api_analyze_public function with this debug version
 
 @app.route('/api/analyze/public', methods=['POST'])
 def api_analyze_public():
@@ -947,12 +983,8 @@ def api_analyze_public():
         label = label_encoder.inverse_transform([pred])[0]
         print(f"DEBUG - Final label: {label}")
 
-        # Explanation (top 5 influential words)
-        feature_names = vectorizer.get_feature_names_out()
-        coefs = model.coef_[int(pred)]
-        word_weights = vec.toarray()[0] * coefs
-        top_indices = np.argsort(word_weights)[::-1][:5]
-        explanation_words = [feature_names[i] for i in top_indices if vec.toarray()[0][i] > 0]
+        # LIME-based explanation
+        explanation_words = get_explanation_words_lime(raw_text, model, vectorizer, scaler)
 
         # Log anonymous usage
         db.session.add(AnalysisHistory(
