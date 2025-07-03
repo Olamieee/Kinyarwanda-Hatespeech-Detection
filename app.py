@@ -88,15 +88,8 @@ GOOGLE_OAUTH_SCOPES = [
     'openid'
 ]
 
-# Mail Configuration
-app.config['MAIL_SERVER'] = 'smtp.sendgrid.net'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'apikey'
-app.config['MAIL_PASSWORD'] = os.getenv('SENDGRID_API_KEY')
-app.config['MAIL_DEFAULT_SENDER'] = 'longelee333@gmail.com'
+SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
 
-mail = Mail(app)
 
 # Database config
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///kinyaai.db'
@@ -107,6 +100,36 @@ db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.login_view = "login"
 login_manager.init_app(app)
+
+def validate_password(password):
+    """
+    Validate password strength
+    Returns (is_valid, error_message)
+    """
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters long"
+    
+    if len(password) > 128:
+        return False, "Password must be less than 128 characters"
+    
+    if not re.search(r'[A-Z]', password):
+        return False, "Password must contain at least one uppercase letter"
+    
+    if not re.search(r'[a-z]', password):
+        return False, "Password must contain at least one lowercase letter"
+    
+    if not re.search(r'\d', password):
+        return False, "Password must contain at least one number"
+    
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        return False, "Password must contain at least one special character"
+    
+    # Check for common passwords
+    common_passwords = ['password', '123456', 'password123', 'admin', 'qwerty', 'letmein']
+    if password.lower() in common_passwords:
+        return False, "Password is too common. Please choose a stronger password"
+    
+    return True, ""
 
 # Stopwords
 kinyarwanda_stopwords = set([
@@ -119,11 +142,11 @@ combined_stopwords = kinyarwanda_stopwords.union(ENGLISH_STOP_WORDS)
 extra_stopwords = {"lol", "lmao", "smh", "bruh", "nah", "omg", "uhh", "hmm", "yo", "yup"}
 combined_stopwords = combined_stopwords.union(extra_stopwords)
 # Load model
-model = joblib.load('model/lr_model.pkl')
+# model = joblib.load('model/lr_model.pkl')
 vectorizer = joblib.load('model/tfidf.pkl')
 label_encoder = joblib.load('model/label_encoder.pkl')
 scaler = joblib.load('model/scaler.pkl')
-mlp_model = joblib.load('model/mlp_model.pkl')
+model = joblib.load('model/mlp_model.pkl')
 
 # Models
 class User(UserMixin, db.Model):
@@ -137,6 +160,13 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), default="user")
     oauth_provider = db.Column(db.String(50), nullable=True)  # Track OAuth provider
     google_id = db.Column(db.String(100), nullable=True)  # Store Google user ID
+
+class LoginAttempt(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    ip_address = db.Column(db.String(45), nullable=False)
+    username = db.Column(db.String(100), nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    successful = db.Column(db.Boolean, default=False)
 
 class AnalysisHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -165,17 +195,46 @@ def preprocess_text(text):
 
 def generate_code(length=7):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+def send_email_with_sendgrid(to_email, subject, html_content, text_content):
+    """Send email using SendGrid REST API"""
+    if not SENDGRID_API_KEY:
+        logging.error("SendGrid API key not configured")
+        return False
+    
+    url = "https://api.sendgrid.com/v3/mail/send"
+    
+    data = {
+        "personalizations": [
+            {
+                "to": [{"email": to_email}],
+                "subject": subject
+            }
+        ],
+        "from": {"email": "longelee333@gmail.com", "name": "RHD Team"},
+        "content": [
+            {"type": "text/plain", "value": text_content},
+            {"type": "text/html", "value": html_content}
+        ]
+    }
+    
+    headers = {
+        "Authorization": f"Bearer {SENDGRID_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        response = requests.post(url, json=data, headers=headers)
+        response.raise_for_status()
+        logging.info(f"Email sent successfully to {to_email}")
+        return True
+    except requests.RequestException as e:
+        logging.error(f"Failed to send email via SendGrid API: {e}")
+        return False
+
 
 def send_verification_email(email, code):
-    logging.debug(f"Preparing to send verification email to {email} with code {code}")
-    try:
-        msg = Message(
-            subject="Your RHD verification code",
-            recipients=[email]
-        )
-
-        # Plain text version
-        msg.body = f"""
+    subject = "Your RHD verification code"
+    text_content = f"""
 Hello,
 
 Thanks for signing up with RHD. Please use the verification code below to complete your registration:
@@ -186,9 +245,7 @@ If you didn't request this, you can safely ignore this message.
 
 – The RHD Team
 """
-
-        # HTML version
-        msg.html = f"""
+    html_content = f"""
 <p>Hello,</p>
 <p>Thanks for signing up with <strong>RHD</strong>.</p>
 <p>Please use the verification code below to complete your registration:</p>
@@ -196,14 +253,31 @@ If you didn't request this, you can safely ignore this message.
 <p>If you didn't request this, you can safely ignore this message.</p>
 <p style="margin-top:20px;">– The RHD Team</p>
 """
+    return send_email_with_sendgrid(email, subject, html_content, text_content)
 
-        mail.send(msg)
-        logging.info(f"Verification email sent to {email}")
-        return True
-    except Exception as e:
-        logging.error(f"Failed to send verification email: {e}")
-        return False
+def send_reset_email(email, code):
+    subject = "Password Reset - RHD"
+    text_content = f"""
+Hello,
 
+You requested a password reset for your RHD account.
+
+Reset Code: {code}
+
+If you didn't request this, please ignore this email.
+
+– The RHD Team
+"""
+    html_content = f"""
+<p>Hello,</p>
+<p>You requested a password reset for your <strong>RHD</strong> account.</p>
+<p>Please use the reset code below:</p>
+<h2 style="color:#2e6c80;">{code}</h2>
+<p>If you didn't request this, please ignore this email.</p>
+<p style="margin-top:20px;">– The RHD Team</p>
+"""
+    return send_email_with_sendgrid(email, subject, html_content, text_content)
+    
 # Google OAuth Helper Functions
 def get_google_auth_url():
     """Generate Google OAuth authorization URL"""
@@ -355,8 +429,20 @@ def register():
         username = request.form['username']
         email = request.form['email']
         password = request.form['password']
+        confirm_password = request.form.get('confirm_password')
         role = request.form.get('role', 'user')
 
+        # Validate password confirmation
+        if password != confirm_password:
+            flash("Passwords do not match.", "danger")
+            return redirect(url_for("register"))
+
+        # Validate password strength
+        is_valid, error_msg = validate_password(password)
+        if not is_valid:
+            flash(error_msg, "danger")
+            return redirect(url_for("register"))
+        
         if User.query.filter((User.username == username) | (User.email == email)).first():
             flash("Username or email already exists.", "danger")
             return redirect(url_for("register"))
@@ -384,7 +470,7 @@ def register():
         return redirect(url_for("verify", username=username))
     return render_template("register.html", google_auth_enabled=GOOGLE_AUTH_ENABLED)
 
-@app.route('/verify/<username>', methods=['GET', 'POST'])
+
 @app.route('/verify/<username>', methods=['GET', 'POST'])
 def verify(username):
     user = User.query.filter_by(username=username).first_or_404()
@@ -395,18 +481,18 @@ def verify(username):
 
     if request.method == 'POST':
         if 'code' in request.form:
-            if request.form['code'] == user.verification_code:
+            entered_code = request.form['code'].strip().upper()  # Add this line
+            stored_code = user.verification_code.strip().upper() if user.verification_code else ""  # Add this line
+            
+            if entered_code == stored_code:
                 user.is_verified = True
                 user.verification_code = None
                 db.session.commit()
-                
-                # Automatically log in the user after successful verification
-                login_user(user)
-                
+            
+                login_user(user)    
                 flash("Account verified successfully! Welcome to RHD.", "success")
                 
-                # Redirect to appropriate dashboard based on role
-                if user.role == "moderator":
+                if user.role == "moderator": #Redirect to appropriate dashboard based on role
                     return redirect(url_for("moderator_dashboard"))
                 else:
                     return redirect(url_for("dashboard"))
@@ -428,14 +514,103 @@ def verify(username):
 
     return render_template("verify.html", username=username, can_resend=can_resend)
 
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form['email']
+        user = User.query.filter_by(email=email).first()
+        
+        if user and user.password_hash:  # Only for non-OAuth users
+            reset_code = generate_code()
+            user.verification_code = reset_code  # Reuse verification_code field
+            db.session.commit()
+            
+            sent = send_reset_email(email, reset_code)
+            if sent:
+                flash("Password reset code sent to your email.", "info")
+                return redirect(url_for("reset_password", email=email))
+            else:
+                flash("Failed to send reset email. Please try again.", "danger")
+        else:
+            # Don't reveal if email exists for security
+            flash("If that email exists, you'll receive a reset code.", "info")
+    
+    return render_template("forgot_password.html")
+
+@app.route('/reset-password/<email>', methods=['GET', 'POST'])
+def reset_password(email):
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        flash("Invalid reset link.", "danger")
+        return redirect(url_for("login"))
+    
+    if request.method == 'POST':
+        entered_code = request.form['code'].strip().upper()  # Add this line
+        stored_code = user.verification_code.strip().upper() if user.verification_code else ""  # Add this line
+        new_password = request.form['new_password']
+        confirm_password = request.form['confirm_password']
+        
+        if entered_code != stored_code:
+            flash("Invalid reset code.", "danger")
+            return render_template("reset_password.html", email=email)
+        
+        if new_password != confirm_password:
+            flash("Passwords do not match.", "danger")
+            return render_template("reset_password.html", email=email)
+        
+        #Validate new password
+        is_valid, error_msg = validate_password(new_password)
+        if not is_valid:
+            flash(error_msg, "danger")
+            return render_template("reset_password.html", email=email)
+        
+        #Update password
+        user.password_hash = generate_password_hash(new_password, method='pbkdf2:sha256', salt_length=16)
+        user.verification_code = None
+        db.session.commit()
+        
+        flash("Password reset successfully! Please log in.", "success")
+        return redirect(url_for("login"))
+    
+    return render_template("reset_password.html", email=email)
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        user = User.query.filter_by(username=request.form['username']).first()
-        if user and user.password_hash and check_password_hash(user.password_hash, request.form['password']):
+        username = request.form['username']
+        password = request.form['password']
+        ip_address = request.remote_addr
+        
+        # Check for too many failed attempts
+        failed_attempts = LoginAttempt.query.filter_by(
+            ip_address=ip_address,
+            successful=False
+        ).filter(
+            LoginAttempt.timestamp >= datetime.utcnow() - timedelta(minutes=15)
+        ).count()
+        
+        if failed_attempts >= 5:
+            flash("Too many failed login attempts. Please try again in 15 minutes.", "danger")
+            return render_template("login.html", google_auth_enabled=GOOGLE_AUTH_ENABLED)
+        
+        user = User.query.filter_by(username=username).first()
+        
+        # Log the attempt
+        attempt = LoginAttempt(
+            ip_address=ip_address,
+            username=username,
+            successful=False
+        )
+        
+        if user and user.password_hash and check_password_hash(user.password_hash, password):
             if not user.is_verified:
                 flash("Please verify your email first.", "warning")
                 return redirect(url_for("verify", username=user.username))
+            
+            # Mark attempt as successful
+            attempt.successful = True
+            db.session.add(attempt)
+            db.session.commit()
             
             login_user(user)
             flash("Logged in successfully!", "success")
@@ -446,6 +621,8 @@ def login():
             else:
                 return redirect(url_for("dashboard"))
         else:
+            db.session.add(attempt)
+            db.session.commit()
             flash("Invalid username or password. Please try again.", "danger")
     
     return render_template("login.html", google_auth_enabled=GOOGLE_AUTH_ENABLED)
