@@ -1,9 +1,5 @@
 .env
 flask_session/
-instance/
-model/hate_speech_kinyarwanda_synthetic_mixed.csv
-model/generated_kinyarwanda_hatespeech.csv
 model/kinyarwanda_hate_speech_preprocessed.csv
 model/kinyarwanda_hate_speech_preprocessed2.csv
-modern_landing.html
-modern_register_page.html
+samples.html
