@@ -34,26 +34,30 @@
       height: 100%;
       z-index: -1;
       background: radial-gradient(circle at 20% 80%, #ff6b6b22 0%, transparent 50%),
-                  radial-gradient(circle at 80% 20%, #4ecdc422 0%, transparent 50%),
-                  radial-gradient(circle at 40% 40%, #45b7d122 0%, transparent 50%);
+        radial-gradient(circle at 80% 20%, #4ecdc422 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, #45b7d122 0%, transparent 50%);
       animation: bgShift 15s ease-in-out infinite;
     }
 
     @keyframes bgShift {
-      0%, 100% { 
+
+      0%,
+      100% {
         background: radial-gradient(circle at 20% 80%, #ff6b6b22 0%, transparent 50%),
-                    radial-gradient(circle at 80% 20%, #4ecdc422 0%, transparent 50%),
-                    radial-gradient(circle at 40% 40%, #45b7d122 0%, transparent 50%);
+          radial-gradient(circle at 80% 20%, #4ecdc422 0%, transparent 50%),
+          radial-gradient(circle at 40% 40%, #45b7d122 0%, transparent 50%);
       }
-      33% { 
+
+      33% {
         background: radial-gradient(circle at 60% 10%, #ff6b6b22 0%, transparent 50%),
-                    radial-gradient(circle at 10% 60%, #4ecdc422 0%, transparent 50%),
-                    radial-gradient(circle at 90% 90%, #45b7d122 0%, transparent 50%);
+          radial-gradient(circle at 10% 60%, #4ecdc422 0%, transparent 50%),
+          radial-gradient(circle at 90% 90%, #45b7d122 0%, transparent 50%);
       }
-      66% { 
+
+      66% {
         background: radial-gradient(circle at 90% 30%, #ff6b6b22 0%, transparent 50%),
-                    radial-gradient(circle at 30% 90%, #4ecdc422 0%, transparent 50%),
-                    radial-gradient(circle at 10% 10%, #45b7d122 0%, transparent 50%);
+          radial-gradient(circle at 30% 90%, #4ecdc422 0%, transparent 50%),
+          radial-gradient(circle at 10% 10%, #45b7d122 0%, transparent 50%);
       }
     }
 
@@ -289,10 +293,21 @@
       font-weight: 500;
     }
 
-    .stat-card:nth-child(1) .stat-number { color: #45b7d1; }
-    .stat-card:nth-child(2) .stat-number { color: #ff6b6b; }
-    .stat-card:nth-child(3) .stat-number { color: #4ecdc4; }
-    .stat-card:nth-child(4) .stat-number { color: #fbbf24; }
+    .stat-card:nth-child(1) .stat-number {
+      color: #45b7d1;
+    }
+
+    .stat-card:nth-child(2) .stat-number {
+      color: #ff6b6b;
+    }
+
+    .stat-card:nth-child(3) .stat-number {
+      color: #4ecdc4;
+    }
+
+    .stat-card:nth-child(4) .stat-number {
+      color: #fbbf24;
+    }
 
     /* Detailed Stats */
     .detailed-stats {
@@ -647,6 +662,7 @@
         opacity: 0;
         transform: translateY(30px);
       }
+
       to {
         opacity: 1;
         transform: translateY(0);
@@ -666,10 +682,23 @@
 
     /* Add some particle effects */
     @keyframes float {
-      0% { transform: translateY(0) rotate(0deg); opacity: 0; }
-      10% { opacity: 0.6; }
-      90% { opacity: 0.6; }
-      100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+      0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 0;
+      }
+
+      10% {
+        opacity: 0.6;
+      }
+
+      90% {
+        opacity: 0.6;
+      }
+
+      100% {
+        transform: translateY(-100vh) rotate(360deg);
+        opacity: 0;
+      }
     }
   </style>
 </head>
@@ -699,7 +728,7 @@
     <div class="welcome-section fade-in">
       <h2 class="welcome-title">Content Moderation Command Center</h2>
       <p class="welcome-description">
-        Monitor and analyze hate speech detection across your platform. Track user behavior, 
+        Monitor and analyze hate speech detection across your platform. Track user behavior,
         review flagged content, and maintain a safe digital environment for your community.
       </p>
     </div>
@@ -743,9 +772,9 @@
         <div class="detail-card">
           <h3>👥 Top 5 Users</h3>
           <ul class="detail-list">
-            {% for user_id, count in stats.top_users %}
+            {% for username, count in stats.top_users %}
             <li>
-              <span>User ID {{ user_id }}</span>
+              <span>{{ username }}</span>
               <span class="detail-value">{{ count }}</span>
             </li>
             {% endfor %}
@@ -773,72 +802,77 @@
       </div>
       <div class="flagged-content">
         {% if flagged %}
-          {% for item in flagged %}
-          <div class="flagged-item">
-            <div class="flagged-meta">
-              <span class="user-id">User ID {{ item.user_id }}</span>
-              <span class="timestamp">{{ item.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</span>
-            </div>
-            <div class="flagged-text">{{ item.tweet_text }}</div>
-            <div class="flagged-details">
-              <span class="label-badge">{{ item.predicted_label }}</span>
-              {% if item.explanation_words %}
-              <span class="explanation">Explanation: {{ item.explanation_words }}</span>
+        {% for item, username in flagged %}
+        <div class="flagged-item">
+          <div class="flagged-meta">
+            <span class="user-id">
+              {% if username %}
+              {{ username }}
+              {% else %}
+              Anonymous
               {% endif %}
-            </div>
+            </span>
+            <span class="timestamp">{{ item.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</span>
           </div>
-          {% endfor %}
+          <div class="flagged-text">{{ item.tweet_text }}</div>
+          <div class="flagged-details">
+            <span class="label-badge">{{ item.predicted_label }}</span>
+            {% if item.explanation_words %}
+            <span class="explanation">Explanation: {{ item.explanation_words }}</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
         {% else %}
-          <div class="no-flagged">
-            <h3>✅ No flagged content found!</h3>
-            <p>All content is safe and within guidelines.</p>
-          </div>
+        <div class="no-flagged">
+          <h3>✅ No flagged content found!</h3>
+          <p>All content is safe and within guidelines.</p>
+        </div>
         {% endif %}
       </div>
     </div>
-  </div>
 
-  <script>
-    // Intersection Observer for fade-in animations
-    const observerOptions = {
-      threshold: 0.1,
-      rootMargin: '0px 0px -50px 0px'
-    };
+    <script>
+      // Intersection Observer for fade-in animations
+      const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+      };
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      }, observerOptions);
+
+      // Observe all fade-in elements
+      document.querySelectorAll('.fade-in').forEach(el => {
+        observer.observe(el);
+      });
+
+      /* Uncomment this section to enable sticky header:
+      
+      // Dynamic navbar background for sticky header
+      window.addEventListener('scroll', () => {
+        const header = document.querySelector('.header');
+        if (window.scrollY > 100) {
+          header.classList.add('scrolled');
+        } else {
+          header.classList.remove('scrolled');
         }
       });
-    }, observerOptions);
+      
+      // Add padding to body to account for fixed header
+      document.body.style.paddingTop = '0'; // Change to header height when sticky
+      
+      */
 
-    // Observe all fade-in elements
-    document.querySelectorAll('.fade-in').forEach(el => {
-      observer.observe(el);
-    });
-
-    /* Uncomment this section to enable sticky header:
-    
-    // Dynamic navbar background for sticky header
-    window.addEventListener('scroll', () => {
-      const header = document.querySelector('.header');
-      if (window.scrollY > 100) {
-        header.classList.add('scrolled');
-      } else {
-        header.classList.remove('scrolled');
-      }
-    });
-    
-    // Add padding to body to account for fixed header
-    document.body.style.paddingTop = '0'; // Change to header height when sticky
-    
-    */
-
-    // Add some particle effects for extra flair
-    function createParticle() {
-      const particle = document.createElement('div');
-      particle.style.cssText = `
+      // Add some particle effects for extra flair
+      function createParticle() {
+        const particle = document.createElement('div');
+        particle.style.cssText = `
         position: fixed;
         width: 4px;
         height: 4px;
@@ -851,16 +885,15 @@
         top: 100%;
         opacity: 0.6;
       `;
-      document.body.appendChild(particle);
-      
-      setTimeout(() => {
-        particle.remove();
-      }, 6000);
-    }
+        document.body.appendChild(particle);
 
-    // Create particles occasionally
-    setInterval(createParticle, 3000);
-  </script>
+        setTimeout(() => {
+          particle.remove();
+        }, 6000);
+      }
+
+      // Create particles occasionally
+      setInterval(createParticle, 3000);
+    </script>
 </body>
-
 </html>

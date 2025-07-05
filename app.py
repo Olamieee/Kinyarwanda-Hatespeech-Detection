@@ -17,19 +17,16 @@ from flask_cors import CORS
 from flask_session import Session
 import urllib.parse
 import json
-from lime.lime_text import LimeTextExplainer
 
-
-# Load environment variables first
 load_dotenv()
 
-# Setup logging
+#Setup logging
 logging.basicConfig(level=logging.DEBUG)
 
-# Create Flask app
+#Create Flask app
 app = Flask(__name__)
 
-# Secret key setup - CRITICAL for security
+#Secret key setup - CRITICAL for security
 SECRET_KEY = os.getenv('SECRET_KEY')
 if not SECRET_KEY:
     SECRET_KEY = secrets.token_hex(32)
@@ -40,31 +37,43 @@ app.secret_key = SECRET_KEY
 app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
 
-# Session configuration - CRITICAL for OAuth
+#Session configuration - CRITICAL for OAuth
 app.config['SESSION_COOKIE_SECURE'] = os.getenv('RENDER') is not None  # True in production
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
-# Enable CORS for the extension with proper session support
+#Enable CORS for the extension with proper session support
 CORS(app, 
-     supports_credentials=True, 
-     origins=["chrome-extension://*"],
-     allow_headers=["Content-Type", "Authorization"],
-     expose_headers=["Set-Cookie"])
+     supports_credentials=True,
+     resources={
+         r"/api/*": {
+             "origins": [
+                 "chrome-extension://*",
+                 "moz-extension://*", 
+                 "http://localhost:*",
+                 "http://127.0.0.1:*",
+                 "https://kinyarwanda-hatespeech-detection.onrender.com"
+             ],
+             "methods": ["GET", "POST", "OPTIONS"],
+             "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+             "expose_headers": ["Set-Cookie"],
+             "supports_credentials": True
+         }
+     })
 
-# Rate limiter
+#Rate limiter
 limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["100 per minute"]
 )
 
-# Check Google OAuth credentials EARLY
+#Check Google OAuth credentials
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET')
 
-# Define GOOGLE_AUTH_ENABLED before using it anywhere
+#Define GOOGLE_AUTH_ENABLED before using it anywhere
 GOOGLE_AUTH_ENABLED = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
 
 if not GOOGLE_AUTH_ENABLED:
@@ -72,18 +81,17 @@ if not GOOGLE_AUTH_ENABLED:
 else:
     logging.info("Google OAuth credentials loaded successfully.")
 
-# Base URL function
+#Base URL function
 def get_base_url():
     """Get base URL based on environment"""
     if os.getenv('RENDER'):
         return f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}"
-    # For local development
-    return os.getenv('BASE_URL', 'http://127.0.0.1:5000')
+    return os.getenv('BASE_URL', 'http://127.0.0.1:5000') #for local development
 
 BASE_URL = get_base_url()
 logging.info(f"Using base URL: {BASE_URL}")
 
-# Google OAuth Configuration
+#Google OAuth Configuration
 GOOGLE_OAUTH_SCOPES = [
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/userinfo.profile',
@@ -92,13 +100,12 @@ GOOGLE_OAUTH_SCOPES = [
 
 SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
 
-
-# Database config
+#Database config
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///kinyaai.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# Login setup
+#Login setup
 login_manager = LoginManager()
 login_manager.login_view = "login"
 login_manager.init_app(app)
@@ -125,32 +132,30 @@ def validate_password(password):
     
     if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
         return False, "Password must contain at least one special character"
-    
-    # Check for common passwords
+    #Check for common passwords
     common_passwords = ['password', '123456', 'password123', 'admin', 'qwerty', 'letmein']
     if password.lower() in common_passwords:
         return False, "Password is too common. Please choose a stronger password"
     
     return True, ""
 
-# Stopwords
+#Stopwords
 kinyarwanda_stopwords = set([
     "na", "ku", "mu", "ya", "y'", "n'", "bya", "cyane", "rwose",
     "kandi", "ubwo", "uko", "ntacyo", "ntukwiye"
 ])
 
-# Combine both sets
+#Combine both sets
 combined_stopwords = kinyarwanda_stopwords.union(ENGLISH_STOP_WORDS)
 extra_stopwords = {"lol", "lmao", "smh", "bruh", "nah", "omg", "uhh", "hmm", "yo", "yup"}
 combined_stopwords = combined_stopwords.union(extra_stopwords)
-# Load model
-# model = joblib.load('model/lr_model.pkl')
+
+#Load models
+model = joblib.load('model/lr_model.pkl')
 vectorizer = joblib.load('model/tfidf.pkl')
 label_encoder = joblib.load('model/label_encoder.pkl')
-scaler = joblib.load('model/scaler.pkl')
-model = joblib.load('model/mlp_model.pkl')
 
-# Models
+#Models
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     full_name = db.Column(db.String(100), nullable=False)
@@ -183,6 +188,17 @@ class AnalysisHistory(db.Model):
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
+
+kinyarwanda_stopwords = set([
+    "na", "ku", "mu", "ya", "y'", "n'", "bya", "cyane", "rwose",
+    "kandi", "ubwo", "uko", "ntacyo", "ntukwiye"
+])
+
+#Combine both sets
+combined_stopwords = kinyarwanda_stopwords.union(ENGLISH_STOP_WORDS)
+extra_stopwords = {"lol", "lmao", "smh", "bruh", "nah", "omg", "uhh", "hmm", "yo", "yup"}
+combined_stopwords = combined_stopwords.union(extra_stopwords)
+
 def preprocess_text(text):
     if not isinstance(text, str):
         return ""
@@ -193,51 +209,43 @@ def preprocess_text(text):
     
     words = text.split()
     words = [word for word in words if word not in combined_stopwords]
+    
     return ' '.join(words)
 
-def get_explanation_words_lime(text, model, vectorizer, scaler, top_n=5):
-    """Get explanation using LIME (Local Interpretable Model-agnostic Explanations)"""
-    def predict_proba_wrapper(texts):
-        """Wrapper function for LIME to use our model"""
-        predictions = []
-        for text in texts:
-            cleaned = preprocess_text(text)
-            vec = vectorizer.transform([cleaned])
-            scaled = scaler.transform(vec.toarray())
-            proba = model.predict_proba(scaled)[0]
-            predictions.append(proba)
-        return np.array(predictions)
-    
-    # Create LIME explainer - removed the 'mode' parameter
-    explainer = LimeTextExplainer(
-        class_names=label_encoder.classes_
-    )
-    
+def get_explanation_words_lr(text, model, vectorizer, predicted_class, top_n=5):
+    """Get explanation using logistic regression coefficients"""
     try:
-        # Generate explanation
-        explanation = explainer.explain_instance(
-            text, 
-            predict_proba_wrapper, 
-            num_features=top_n,
-            num_samples=1000  # Number of samples for LIME
-        )
+        #Get feature names and coefficients
+        feature_names = vectorizer.get_feature_names_out()
+        coefficients = model.coef_[predicted_class]  #Get coefficients for predicted class
         
-        # Extract the most important words
-        explanation_words = []
-        for word, weight in explanation.as_list():
-            if weight > 0:  # Only positive weights (words that contribute to the prediction)
-                explanation_words.append(word)
+        # Transform the input text
+        cleaned = preprocess_text(text)
+        vec = vectorizer.transform([cleaned])
+        feature_indices = vec.nonzero()[1]
         
-        return explanation_words[:top_n]
-    
+        word_importance = []
+        for idx in feature_indices:
+            word = feature_names[idx]
+            coef = coefficients[idx]
+            tfidf_val = vec[0, idx]
+            importance = abs(coef * tfidf_val)  #Use absolute value
+            word_importance.append((word, importance))
+        
+        #Sort by importance and return top words
+        word_importance.sort(key=lambda x: x[1], reverse=True)
+        explanation_words = [word for word, _ in word_importance[:top_n]]
+        
+        return explanation_words
+        
     except Exception as e:
-        print(f"LIME explanation failed: {e}")
-        # Fallback to simple word extraction
+        print(f"LR explanation failed: {e}")
+        #Fallback to simple word extraction
         cleaned = preprocess_text(text)
         words = cleaned.split()
         feature_names = vectorizer.get_feature_names_out()
         vocab_words = [word for word in words if word in feature_names]
-        return list(dict.fromkeys(vocab_words))[:top_n]  # Remove duplicates
+        return list(dict.fromkeys(vocab_words))[:top_n]
         
 def generate_code(length=7):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
@@ -277,7 +285,7 @@ def send_email_with_sendgrid(to_email, subject, html_content, text_content):
         logging.error(f"Failed to send email via SendGrid API: {e}")
         return False
 
-
+#send emails
 def send_verification_email(email, code):
     subject = "Your RHD verification code"
     text_content = f"""
@@ -336,10 +344,10 @@ def get_google_auth_url():
         'scope': ' '.join(GOOGLE_OAUTH_SCOPES),
         'response_type': 'code',
         'access_type': 'offline',
-        'state': secrets.token_urlsafe(32)  # CSRF protection
+        'state': secrets.token_urlsafe(32)  #CSRF protection
     }
     
-    # Store state in session for verification
+    #Store state in session for verification
     session['oauth_state'] = params['state']
     
     auth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' + urllib.parse.urlencode(params)
@@ -350,12 +358,12 @@ def exchange_code_for_token(code, state):
     if not GOOGLE_AUTH_ENABLED:
         return None
     
-    # Verify state parameter (CSRF protection)
+    #Verify state parameter (CSRF protection)
     if state != session.get('oauth_state'):
         logging.error("OAuth state mismatch")
         return None
     
-    # Clear the state from session
+    #Clear the state from session
     session.pop('oauth_state', None)
     
     token_url = 'https://oauth2.googleapis.com/token'
@@ -388,12 +396,12 @@ def get_google_user_info(access_token):
         logging.error(f"Error fetching user info: {e}")
         return None
 
-# Rate limiting
+#Rate limiting
 user_last_requests = {}
 
 @app.before_request
 def rate_limit():
-    # Skip rate limiting for extension API calls
+    #skip rate limiting for extension API calls
     if request.endpoint == 'api_analyze_public':
         return
         
@@ -422,12 +430,15 @@ def get_moderator_stats():
     ).group_by(AnalysisHistory.predicted_label).all()
     counts_dict = {label: count for label, count in counts_by_label}
 
+    # Updated to include usernames
     top_users = db.session.query(
-        AnalysisHistory.user_id,
+        User.username,
         func.count(AnalysisHistory.id).label("flagged_count")
+    ).join(
+        AnalysisHistory, User.id == AnalysisHistory.user_id
     ).filter(
         AnalysisHistory.predicted_label.in_(["offensive", "hate"])
-    ).group_by(AnalysisHistory.user_id).order_by(func.count(AnalysisHistory.id).desc()).limit(5).all()
+    ).group_by(User.username).order_by(func.count(AnalysisHistory.id).desc()).limit(5).all()
 
     explanations = AnalysisHistory.query.with_entities(AnalysisHistory.explanation_words).filter(
         AnalysisHistory.predicted_label.in_(["offensive", "hate"])
@@ -551,7 +562,7 @@ def verify(username):
             sent = send_verification_email(user.email, new_code)
             if sent:
                 flash("Verification code resent. Please check your email.", "info")
-                session['resend_cooldown'] = time.time() + 60  # 60 seconds cooldown
+                session['resend_cooldown'] = time.time() + 60  #60 seconds cooldown
             else:
                 flash("Failed to resend code. Please try again later.", "danger")
         elif 'resend' in request.form and not can_resend:
@@ -566,9 +577,9 @@ def forgot_password():
         email = request.form['email']
         user = User.query.filter_by(email=email).first()
         
-        if user and user.password_hash:  # Only for non-OAuth users
+        if user and user.password_hash:  #only for non-OAuth users
             reset_code = generate_code()
-            user.verification_code = reset_code  # Reuse verification_code field
+            user.verification_code = reset_code  #reuse verification_code field
             db.session.commit()
             
             sent = send_reset_email(email, reset_code)
@@ -578,7 +589,7 @@ def forgot_password():
             else:
                 flash("Failed to send reset email. Please try again.", "danger")
         else:
-            # Don't reveal if email exists for security
+            #don't reveal if email exists for security
             flash("If that email exists, you'll receive a reset code.", "info")
     
     return render_template("forgot_password.html")
@@ -591,8 +602,8 @@ def reset_password(email):
         return redirect(url_for("login"))
     
     if request.method == 'POST':
-        entered_code = request.form['code'].strip().upper()  # Add this line
-        stored_code = user.verification_code.strip().upper() if user.verification_code else ""  # Add this line
+        entered_code = request.form['code'].strip().upper()
+        stored_code = user.verification_code.strip().upper() if user.verification_code else ""
         new_password = request.form['new_password']
         confirm_password = request.form['confirm_password']
         
@@ -627,7 +638,7 @@ def login():
         password = request.form['password']
         ip_address = request.remote_addr
         
-        # Check for too many failed attempts
+        #Check for too many failed attempts
         failed_attempts = LoginAttempt.query.filter_by(
             ip_address=ip_address,
             successful=False
@@ -641,7 +652,7 @@ def login():
         
         user = User.query.filter_by(username=username).first()
         
-        # Log the attempt
+        #Log the attempt
         attempt = LoginAttempt(
             ip_address=ip_address,
             username=username,
@@ -653,7 +664,7 @@ def login():
                 flash("Please verify your email first.", "warning")
                 return redirect(url_for("verify", username=user.username))
             
-            # Mark attempt as successful
+            #Mark attempt as successful
             attempt.successful = True
             db.session.add(attempt)
             db.session.commit()
@@ -678,14 +689,14 @@ def login():
 def logout():
     logout_user()
     
-    # Clear any existing flash messages
+    #Clear any existing flash messages
     session.pop('_flashes', None)
     
     flash("Logged out successfully.", "info")
     return redirect(url_for("login"))
 
 
-# New Google OAuth Routes
+#Google OAuth Routes
 @app.route('/auth/google')
 def auth_google():
     """Initiate Google OAuth"""
@@ -707,7 +718,7 @@ def auth_google_callback():
         flash("Google authentication is not configured.", "danger")
         return redirect(url_for('login'))
     
-    # Get authorization code and state from query parameters
+    #Get authorization code and state from query parameters
     code = request.args.get('code')
     state = request.args.get('state')
     error = request.args.get('error')
@@ -720,7 +731,7 @@ def auth_google_callback():
         flash("No authorization code received from Google.", "danger")
         return redirect(url_for('login'))
     
-    # Exchange code for token
+    #Exchange code for token
     token_data = exchange_code_for_token(code, state)
     if not token_data:
         flash("Failed to get access token from Google.", "danger")
@@ -731,7 +742,7 @@ def auth_google_callback():
         flash("No access token received from Google.", "danger")
         return redirect(url_for('login'))
     
-    # Get user info
+    #Get user info
     user_info = get_google_user_info(access_token)
     if not user_info:
         flash("Failed to get user information from Google.", "danger")
@@ -745,14 +756,14 @@ def auth_google_callback():
         flash("Incomplete user information from Google.", "danger")
         return redirect(url_for('login'))
     
-    # Get role from session (set during registration flow)
+    #Get role from session (set during registration flow)
     pending_role = session.pop('pending_role', 'user')
     
-    # Check if user exists
+    #Check if user exists
     user = User.query.filter_by(email=email).first()
     
     if not user:
-        # Create new user with the selected role
+        #Create new user with the selected role
         username_base = email.split("@")[0]
         username = username_base
         counter = 1
@@ -773,19 +784,14 @@ def auth_google_callback():
         db.session.commit()
         flash(f"Account created successfully with Google as {pending_role}!", "success")
     else:
-        # Update existing user with Google info if not already set
         if not user.google_id:
             user.google_id = google_id
             user.oauth_provider = "google"
             user.is_verified = True
             db.session.commit()
         else:
-            # Prevent role changes for existing users
             if user.role != pending_role:
                 flash(f"You already signed up as a '{user.role}'. Contact support to change your role.", "warning")
-
-    
-    # Log the user in
     login_user(user, remember=True)
     
     flash("Logged in with Google!", "success")
@@ -830,11 +836,8 @@ def dashboard():
             
         vec = vectorizer.transform([cleaned])
         print(f"DEBUG - Vector shape: {vec.shape}")
-        scaled = scaler.transform(vec.toarray())
-        print(f"DEBUG - Scaled shape: {scaled.shape}")
-            
-            # Get prediction probabilities and use the class with highest probability
-        proba = model.predict_proba(scaled)[0]
+
+        proba = model.predict_proba(vec)[0]
         pred = np.argmax(proba)
             
         print(f"DEBUG - Prediction probabilities: {proba}")
@@ -844,9 +847,8 @@ def dashboard():
             
         label = label_encoder.inverse_transform([pred])[0]
         print(f"DEBUG - Final label: {label}")
-
-        # LIME-based explanation
-        explanation_words = get_explanation_words_lime(raw_text, model, vectorizer, scaler)
+        
+        explanation_words = get_explanation_words_lr(raw_text, model, vectorizer, pred)
 
         db.session.add(AnalysisHistory(
             user_id=current_user.id,
@@ -866,8 +868,9 @@ def dashboard():
 def moderator_dashboard():
     if current_user.role != "moderator":
         abort(403)
-
-    flagged = AnalysisHistory.query.filter(
+    flagged = db.session.query(AnalysisHistory, User.username).outerjoin(
+        User, AnalysisHistory.user_id == User.id
+    ).filter(
         AnalysisHistory.predicted_label.in_(["offensive", "hate"])
     ).order_by(AnalysisHistory.timestamp.desc()).all()
 
@@ -881,15 +884,18 @@ def export_flagged():
     if current_user.role != "moderator":
         abort(403)
     
-    flagged = AnalysisHistory.query.filter(
+    # Join with User table to get usernames
+    flagged = db.session.query(AnalysisHistory, User.username).outerjoin(
+        User, AnalysisHistory.user_id == User.id
+    ).filter(
         AnalysisHistory.predicted_label.in_(["offensive", "hate"])
     ).order_by(AnalysisHistory.timestamp.desc()).all()
 
     output = []
-    output.append(['User ID', 'Tweet', 'Label', 'Explanation', 'Timestamp'])
-    for item in flagged:
+    output.append(['User', 'Tweet', 'Label', 'Explanation', 'Timestamp'])
+    for item, username in flagged:
         output.append([
-            item.user_id,
+            username if username else 'Anonymous',
             item.tweet_text,
             item.predicted_label,
             item.explanation_words or "",
@@ -902,7 +908,7 @@ def export_flagged():
     return response
 
 @app.route('/api/analyze', methods=['POST'])
-@login_required  # Requires the user to be logged in
+@login_required
 def api_analyze():
     if not request.json or 'text' not in request.json:
         return jsonify({'error': 'Missing text'}), 400
@@ -914,11 +920,8 @@ def api_analyze():
         
     vec = vectorizer.transform([cleaned])
     print(f"DEBUG - Vector shape: {vec.shape}")
-    scaled = scaler.transform(vec.toarray())
-    print(f"DEBUG - Scaled shape: {scaled.shape}")
-        
-        # Get prediction probabilities and use the class with highest probability
-    proba = model.predict_proba(scaled)[0]
+
+    proba = model.predict_proba(vec)[0]
     pred = np.argmax(proba)
         
     print(f"DEBUG - Prediction probabilities: {proba}")
@@ -928,9 +931,7 @@ def api_analyze():
         
     label = label_encoder.inverse_transform([pred])[0]
     print(f"DEBUG - Final label: {label}")
-
-    # LIME-based explanation
-    explanation_words = get_explanation_words_lime(raw_text, model, vectorizer, scaler)
+    explanation_words = get_explanation_words_lr(raw_text, model, vectorizer, pred)
 
     db.session.add(AnalysisHistory(
         user_id=current_user.id,
@@ -949,30 +950,38 @@ def api_analyze():
 
 @app.route('/api/analyze/public', methods=['POST'])
 def api_analyze_public():
-    if not request.json or 'text' not in request.json:
-        return jsonify({'error': 'Missing text'}), 400
-
-    raw_text = request.json['text']
-    
-    # Basic validation
-    if len(raw_text.strip()) == 0:
-        return jsonify({'error': 'Empty text'}), 400
-    
-    if len(raw_text) > 1000:  # Limit text length
-        return jsonify({'error': 'Text too long (max 1000 characters)'}), 400
-
     try:
+        # Validate request
+        if not request.json or 'text' not in request.json:
+            return jsonify({'error': 'Missing text parameter'}), 400
+
+        raw_text = request.json['text']
+        
+        # Basic validation
+        if not raw_text or len(raw_text.strip()) == 0:
+            return jsonify({'error': 'Empty text provided'}), 400
+        
+        if len(raw_text) > 1000:  # Limit text length
+            return jsonify({'error': 'Text too long (max 1000 characters)'}), 400
+
+        # Process the text
         cleaned = preprocess_text(raw_text)
         print(f"DEBUG - Raw text: {raw_text}")
         print(f"DEBUG - Cleaned text: {cleaned}")
         
+        # Check if cleaned text is empty
+        if not cleaned:
+            return jsonify({
+                'prediction': 'normal',
+                'explanation': [],
+                'status': 'success',
+                'message': 'No analyzable content found'
+            })
+        
         vec = vectorizer.transform([cleaned])
         print(f"DEBUG - Vector shape: {vec.shape}")
-        scaled = scaler.transform(vec.toarray())
-        print(f"DEBUG - Scaled shape: {scaled.shape}")
-        
         # Get prediction probabilities and use the class with highest probability
-        proba = model.predict_proba(scaled)[0]
+        proba = model.predict_proba(vec)[0]
         pred = np.argmax(proba)
         
         print(f"DEBUG - Prediction probabilities: {proba}")
@@ -983,34 +992,45 @@ def api_analyze_public():
         label = label_encoder.inverse_transform([pred])[0]
         print(f"DEBUG - Final label: {label}")
 
-        # LIME-based explanation
-        explanation_words = get_explanation_words_lime(raw_text, model, vectorizer, scaler)
+        explanation_words = get_explanation_words_lr(raw_text, model, vectorizer, pred)
 
-        # Log anonymous usage
-        db.session.add(AnalysisHistory(
-            user_id=None,  # Anonymous
-            tweet_text=raw_text,
-            predicted_label=label,
-            explanation_words=", ".join(explanation_words),
-            source="extension"
-        ))
-        db.session.commit()
+        #log anonymous usage
+        try:
+            db.session.add(AnalysisHistory(
+                user_id=None,
+                tweet_text=raw_text,
+                predicted_label=label,
+                explanation_words=", ".join(explanation_words),
+                source="extension"
+            ))
+            db.session.commit()
+        except Exception as db_error:
+            print(f"Database logging error: {db_error}")
+            # Continue without failing the request
 
-        return jsonify({
+        response_data = {
             'prediction': label,
             'explanation': explanation_words,
             'status': 'success',
             'debug': {
                 'numeric_prediction': int(pred),
                 'probabilities': proba.tolist(),
-                'cleaned_text': cleaned
+                'cleaned_text': cleaned,
+                'confidence': float(max(proba))
             }
-        })
+        }
+        
+        return jsonify(response_data)
+
     except Exception as e:
         logging.error(f"Error in public API: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': f'Analysis failed: {str(e)}'}), 500
+        
+        return jsonify({
+            'error': f'Analysis failed: {str(e)}',
+            'status': 'error'
+        }), 500
 
 @app.route("/clear-session")
 def clear_session():
