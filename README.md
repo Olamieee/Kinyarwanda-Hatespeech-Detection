@@ -1,4 +1,4 @@
-# 🇷🇼 Kinyarwanda Hate Speech Detection App
+# Kinyarwanda Hate Speech Detection App
 
 A machine learning-powered app that detects **hate**, **offensive**, or **normal** speech in **Kinyarwanda** social media text using logistic regression. Also includes a **Chrome extension** (Developer Mode) for real-time classification.
 
@@ -19,10 +19,20 @@ A machine learning-powered app that detects **hate**, **offensive**, or **normal
 ```
 project/
 │
-├── app.py                     #Flask app
+├── app.py #Flask app
+|── README.md
 |── Procfile
 ├── requirements.txt
-├── .gitignore
+├── .
+|── css/
+|    ├── dashboard.css
+|    ├── index.css
+|    ├── login.css
+|    ├── register.css
+|    ├── moderator_dashboard.css
+|    ├── verify.css
+|    ├── forgot_password.css
+|    ├── reset_password.css
 ├── templates/
 |    ├── dashboard.html
 |    ├── index.html
@@ -34,15 +44,17 @@ project/
 |    ├── reset_password.html
 ├── model/
 │   ├── hate_speech_model.ipynb  # Model Notebook
-|   ├── kinyarwanda_hatespeech_noisy.csv  # Initial dataset
-|   ├── final_dataset.tsv             # Additional scraped dataset
-|   ├── model.pkl             # Trained logistic regression model
-|   ├── tfidf.pkl          # TF-IDF vectorizer used during training
-├── RHD_extension/                    # Chrome extension source files
+|   ├── kinyarwanda_hatespeech_noisy.csv
+|   ├── final_dataset.tsv
+|   ├── label_encoder.pkl
+|   ├── model.pkl     # Trained logistic regression model
+|   ├── tfidf.pkl     # TF-IDF vectorizer used during training
+├── RHD_extension/    # Chrome extension source files
 │   ├── manifest.json
 │   ├── popup.html
 │   ├── popup.js
-│   └── contrnt.js
+│   ├── icon.png
+│   └── content.js
 │   ├── background.js
 ```
 
@@ -61,7 +73,7 @@ cd kinyarwanda-hate-speech-app
 
 ```bash
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+venv\Scripts\activate
 ```
 
 ### Step 3: Install Dependencies

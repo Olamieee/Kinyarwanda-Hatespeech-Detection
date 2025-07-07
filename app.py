@@ -26,7 +26,7 @@ logging.basicConfig(level=logging.DEBUG)
 #Create Flask app
 app = Flask(__name__)
 
-#Secret key setup - CRITICAL for security
+#Secret key setup
 SECRET_KEY = os.getenv('SECRET_KEY')
 if not SECRET_KEY:
     SECRET_KEY = secrets.token_hex(32)
@@ -37,7 +37,7 @@ app.secret_key = SECRET_KEY
 app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
 
-#Session configuration - CRITICAL for OAuth
+#Session configuration
 app.config['SESSION_COOKIE_SECURE'] = os.getenv('RENDER') is not None  # True in production
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
