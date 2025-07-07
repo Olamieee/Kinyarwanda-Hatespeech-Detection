@@ -20,6 +20,9 @@ A machine learning-powered app that detects **hate**, **offensive**, or **normal
 project/
 │
 ├── app.py                     #Flask app
+|── Procfile
+├── requirements.txt
+├── .gitignore
 ├── templates/
 |    ├── dashboard.html
 |    ├── index.html
@@ -40,7 +43,7 @@ project/
 │   ├── popup.html
 │   ├── popup.js
 │   └── contrnt.js
-│   ├── bacjground.js
+│   ├── background.js
 ```
 
 ---
