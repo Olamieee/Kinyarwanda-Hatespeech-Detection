@@ -19,17 +19,28 @@ A machine learning-powered app that detects **hate**, **offensive**, or **normal
 ```
 project/
 │
-├── app 2.py                       # Main app script (e.g., Streamlit or Flask)
-├── hate_speech_model.ipynb.txt   # Notebook (text version of training pipeline)
-├── kinyarwanda_hatespeech_noisy.csv  # Initial dataset
-├── final_dataset.tsv             # Additional scraped dataset
-├── model.pkl                     # Trained logistic regression model
-├── tfidf_vectorizer.pkl          # TF-IDF vectorizer used during training
-├── extension/                    # Chrome extension source files
+├── app.py                     #Flask app
+├── templates/
+|    ├── dashboard.html
+|    ├── index.html
+|    ├── login.html
+|    ├── register.html
+|    ├── moderator_dashboard.html
+|    ├── verify.html
+|    ├── forgot_password.html
+|    ├── reset_password.html
+├── model/
+│   ├── hate_speech_model.ipynb  # Model Notebook
+|   ├── kinyarwanda_hatespeech_noisy.csv  # Initial dataset
+|   ├── final_dataset.tsv             # Additional scraped dataset
+|   ├── model.pkl             # Trained logistic regression model
+|   ├── tfidf.pkl          # TF-IDF vectorizer used during training
+├── RHD_extension/                    # Chrome extension source files
 │   ├── manifest.json
 │   ├── popup.html
 │   ├── popup.js
-│   └── style.css
+│   └── contrnt.js
+│   ├── bacjground.js
 ```
 
 ---
@@ -39,7 +50,7 @@ project/
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/kinyarwanda-hate-speech-app.git
+git clone https://github.com/Olamieee/kinyarwanda-hate-speech-app.git
 cd kinyarwanda-hate-speech-app
 ```
 
@@ -56,16 +67,6 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-If `requirements.txt` is missing, use:
-
-```txt
-pandas
-numpy
-scikit-learn
-joblib
-streamlit  # or flask if applicable
-```
-
 ### Step 4 (Optional): Train the Model
 
 Open the notebook:
@@ -78,14 +79,14 @@ This will:
 - Merge + clean datasets
 - Vectorize text
 - Train logistic regression
-- Export `model.pkl` & `tfidf_vectorizer.pkl`
+- Export `model.pkl` & `tfidf.pkl`
 
 ### Step 5: Run the App
 
 #### Run with Flask
 
 ```bash
-python app\ 2.py
+python app.py
 ```
 
 Visit the app at `http://localhost:5000` (default Flask port).
@@ -99,16 +100,16 @@ Visit the app at `http://localhost:5000` (default Flask port).
 1. Go to `chrome://extensions/`
 2. Enable **Developer Mode** (top right)
 3. Click **Load Unpacked**
-4. Select the `extension/` folder
+4. Select the `RHD_extension/` folder
 
 ### Step 2: Use the Extension
 
+- Highlight Kinyarwanda text
 - Click the extension icon in Chrome toolbar
-- Paste or highlight Kinyarwanda text
 - Click **Analyze**
 - Classification result will display below
 
-> Note: Extension communicates with local server (e.g., Streamlit app) via `localhost`. Ensure the web app is running before using the extension.
+> Note: Extension communicates either with local server via `localhost` or deployed server via the url. Ensure the web app is running before using the extension.
 
 ---
 
@@ -144,4 +145,4 @@ This project is licensed under the **MIT License**.
 
 ## 🙌 Credits
 
-Built by [Your Name] — Contributions welcome!
+Built by Olamieee — Contributions welcome!
