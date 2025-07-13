@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <link rel="stylesheet" href="../css/register.css">
+  <link rel="stylesheet" href="../static/css/register.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -61,6 +61,11 @@
             </div>
           </div>
         </div>
+        <div id="google-secret-word-section" style="display:none; margin-top: 1rem;">
+          <label for="google_secret_word">Moderator Secret Word</label>
+          <input type="password" id="google_secret_word" name="secret_word" placeholder="Enter secret word">
+        </div>
+
         
         <button type="submit" class="google-register-btn">
           <div class="google-icon"></div>
@@ -116,6 +121,11 @@
           </div>
         </div>
       </div>
+      <div id="secret-word-section" style="display:none; margin-top: 1rem;">
+  <label for="secret_word">Moderator Secret Word</label>
+  <input type="password" id="secret_word" name="secret_word" placeholder="Enter secret word">
+</div>
+
 
       <button type="submit">Create Account</button>
     </form>
@@ -179,7 +189,44 @@
         }
       `;
       document.head.appendChild(style);
+
+      // Handle secret word section for manual registration
+      const modRadio = document.getElementById('moderator');
+      const userRadio = document.getElementById('user');
+      const secretSection = document.getElementById('secret-word-section');
+
+      modRadio.addEventListener('change', function() {
+        if (this.checked) {
+          secretSection.style.display = 'block';
+        }
+      });
+
+      userRadio.addEventListener('change', function() {
+        if (this.checked) {
+          secretSection.style.display = 'none';
+        }
+      });
+
+      // Handle secret word section for Google registration
+      const googleModRadio = document.getElementById('google_moderator');
+      const googleUserRadio = document.getElementById('google_user');
+      const googleSecretSection = document.getElementById('google-secret-word-section');
+
+      if (googleModRadio && googleUserRadio && googleSecretSection) {
+        googleModRadio.addEventListener('change', function() {
+          if (this.checked) {
+            googleSecretSection.style.display = 'block';
+          }
+        });
+
+        googleUserRadio.addEventListener('change', function() {
+          if (this.checked) {
+            googleSecretSection.style.display = 'none';
+          }
+        });
+      }
     });
+</script>
   </script>
 </body>
 </html>

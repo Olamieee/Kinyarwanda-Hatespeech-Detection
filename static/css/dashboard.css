@@ -358,6 +358,13 @@
       text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
     }
 
+    .prediction-sarcasm {
+  background: rgba(249, 115, 22, 0.2);
+  color: #f97316;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  text-shadow: 0 0 10px rgba(249, 115, 22, 0.5);
+}
+
     .explanation-section {
       margin-top: 1rem;
       padding: 1.5rem;
@@ -457,6 +464,12 @@
       color: #ef4444;
       border: 1px solid rgba(239, 68, 68, 0.3);
     }
+
+    .label-sarcasm {
+  background: rgba(249, 115, 22, 0.2);
+  color: #f97316;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
 
     .history-explanation {
       margin-top: 1rem;

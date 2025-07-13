@@ -419,29 +419,35 @@ def rate_limit():
 
 def get_moderator_stats():
     total_users = User.query.count()
+    
+    total_analyzed = AnalysisHistory.query.count()   #show all predictions
     total_flagged = AnalysisHistory.query.filter(
-        AnalysisHistory.predicted_label.in_(["offensive", "hate"])
+        AnalysisHistory.predicted_label.in_(["sarcasm/joke", "hate"])
     ).count()
 
-    counts_by_label = db.session.query(
+    counts_by_label = db.session.query( #get counts for all labels
         AnalysisHistory.predicted_label, func.count(AnalysisHistory.id)
-    ).filter(
-        AnalysisHistory.predicted_label.in_(["offensive", "hate"])
     ).group_by(AnalysisHistory.predicted_label).all()
     counts_dict = {label: count for label, count in counts_by_label}
 
-    # Updated to include usernames
-    top_users = db.session.query(
+    top_users_flagged = db.session.query( #show top users by total analysis activity
         User.username,
         func.count(AnalysisHistory.id).label("flagged_count")
     ).join(
         AnalysisHistory, User.id == AnalysisHistory.user_id
     ).filter(
-        AnalysisHistory.predicted_label.in_(["offensive", "hate"])
+        AnalysisHistory.predicted_label.in_(["sarcasm/joke", "hate"])
+    ).group_by(User.username).order_by(func.count(AnalysisHistory.id).desc()).limit(5).all()
+
+    top_users_overall = db.session.query( #show most active users overall
+        User.username,
+        func.count(AnalysisHistory.id).label("total_count")
+    ).join(
+        AnalysisHistory, User.id == AnalysisHistory.user_id
     ).group_by(User.username).order_by(func.count(AnalysisHistory.id).desc()).limit(5).all()
 
     explanations = AnalysisHistory.query.with_entities(AnalysisHistory.explanation_words).filter(
-        AnalysisHistory.predicted_label.in_(["offensive", "hate"])
+        AnalysisHistory.predicted_label.in_(["sarcasm/joke", "hate"]) #get explanation words from all flagged content
     ).all()
     word_freq = {}
     for (expl,) in explanations:
@@ -453,22 +459,30 @@ def get_moderator_stats():
 
     week_ago = datetime.utcnow() - timedelta(days=7)
     flagged_week = AnalysisHistory.query.filter(
-        AnalysisHistory.predicted_label.in_(["offensive", "hate"]),
+        AnalysisHistory.predicted_label.in_(["sarcasm/joke", "hate"]),
         AnalysisHistory.timestamp >= week_ago
     ).count()
 
-    avg_flagged_per_user = total_flagged / total_users if total_users else 0
+    weekly_by_label = db.session.query( #weekly stats for all labels
+        AnalysisHistory.predicted_label, func.count(AnalysisHistory.id)
+    ).filter(
+        AnalysisHistory.timestamp >= week_ago
+    ).group_by(AnalysisHistory.predicted_label).all()
+    weekly_dict = {label: count for label, count in weekly_by_label}
 
-    total_analyses = AnalysisHistory.query.count()
-    flagged_percentage = (total_flagged / total_analyses * 100) if total_analyses else 0
+    avg_flagged_per_user = total_flagged / total_users if total_users else 0
+    flagged_percentage = (total_flagged / total_analyzed * 100) if total_analyzed else 0
 
     return {
         "total_users": total_users,
+        "total_analyzed": total_analyzed,
         "total_flagged": total_flagged,
         "counts_by_label": counts_dict,
-        "top_users": top_users,
+        "top_users_flagged": top_users_flagged,
+        "top_users_overall": top_users_overall,
         "top_words": top_words,
         "flagged_week": flagged_week,
+        "weekly_by_label": weekly_dict,
         "avg_flagged_per_user": avg_flagged_per_user,
         "flagged_percentage": flagged_percentage,
     }
@@ -482,6 +496,13 @@ def index():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
+        entered_secret = request.form.get('secret_word', '')
+        SECRET_WORD = "jollofsweet"  #secretword
+
+        if role == "moderator" and entered_secret != SECRET_WORD:
+            flash("Invalid secret word. Please sign up as a regular user.", "danger")
+            return redirect(url_for("register"))
+
         full_name = request.form['full_name']
         username = request.form['username']
         email = request.form['email']
@@ -711,6 +732,33 @@ def auth_google():
     
     return redirect(auth_url)
 
+@app.route('/auth/google/register', methods=['POST'])
+def auth_google_register():
+    """Store role selection in session before Google OAuth"""
+    if not GOOGLE_AUTH_ENABLED:
+        flash("Google authentication is not configured.", "danger")
+        return redirect(url_for('register'))
+        
+    # Store the selected role in session
+    role = request.form.get('role', 'user')
+    session['pending_role'] = role
+    
+    # Store secret word in session if moderator role is selected
+    if role == 'moderator':
+        entered_secret = request.form.get('secret_word', '')
+        if not entered_secret:
+            flash("Secret word is required for moderator registration.", "error")
+            return redirect(url_for('register'))
+        session['pending_secret_word'] = entered_secret
+    
+    # Redirect to Google OAuth
+    auth_url = get_google_auth_url()
+    if not auth_url:
+        flash("Failed to generate Google auth URL.", "danger")
+        return redirect(url_for('register'))
+        
+    return redirect(auth_url)
+
 @app.route('/auth/google/callback')
 def auth_google_callback():
     """Handle Google OAuth callback"""
@@ -718,7 +766,7 @@ def auth_google_callback():
         flash("Google authentication is not configured.", "danger")
         return redirect(url_for('login'))
     
-    #Get authorization code and state from query parameters
+    # Get authorization code and state from query parameters
     code = request.args.get('code')
     state = request.args.get('state')
     error = request.args.get('error')
@@ -731,7 +779,7 @@ def auth_google_callback():
         flash("No authorization code received from Google.", "danger")
         return redirect(url_for('login'))
     
-    #Exchange code for token
+    # Exchange code for token
     token_data = exchange_code_for_token(code, state)
     if not token_data:
         flash("Failed to get access token from Google.", "danger")
@@ -742,7 +790,7 @@ def auth_google_callback():
         flash("No access token received from Google.", "danger")
         return redirect(url_for('login'))
     
-    #Get user info
+    # Get user info
     user_info = get_google_user_info(access_token)
     if not user_info:
         flash("Failed to get user information from Google.", "danger")
@@ -756,14 +804,21 @@ def auth_google_callback():
         flash("Incomplete user information from Google.", "danger")
         return redirect(url_for('login'))
     
-    #Get role from session (set during registration flow)
+    # Get role from session (set during registration flow)
     pending_role = session.pop('pending_role', 'user')
-    
-    #Check if user exists
+    entered_secret = session.pop('pending_secret_word', '')
+    SECRET_WORD = "jollofsweet"  #this should be actual secret word
+
+    # Validate secret word for moderator role
+    if pending_role == "moderator" and entered_secret != SECRET_WORD:
+        flash("Invalid secret word for moderator. Signing up as user.", "warning")
+        pending_role = "user"
+
+    # Check if user exists
     user = User.query.filter_by(email=email).first()
     
     if not user:
-        #Create new user with the selected role
+        # Create new user with the selected role
         username_base = email.split("@")[0]
         username = username_base
         counter = 1
@@ -792,29 +847,11 @@ def auth_google_callback():
         else:
             if user.role != pending_role:
                 flash(f"You already signed up as a '{user.role}'. Contact support to change your role.", "warning")
+    
     login_user(user, remember=True)
     
     flash("Logged in with Google!", "success")
     return redirect(url_for("dashboard" if user.role == "user" else "moderator_dashboard"))
-
-@app.route('/auth/google/register', methods=['POST'])
-def auth_google_register():
-    """Store role selection in session before Google OAuth"""
-    if not GOOGLE_AUTH_ENABLED:
-        flash("Google authentication is not configured.", "danger")
-        return redirect(url_for('register'))
-    
-    # Store the selected role in session
-    role = request.form.get('role', 'user')
-    session['pending_role'] = role
-    
-    # Redirect to Google OAuth
-    auth_url = get_google_auth_url()
-    if not auth_url:
-        flash("Failed to generate Google auth URL.", "danger")
-        return redirect(url_for('register'))
-    
-    return redirect(auth_url)
 
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
@@ -868,15 +905,22 @@ def dashboard():
 def moderator_dashboard():
     if current_user.role != "moderator":
         abort(403)
-    flagged = db.session.query(AnalysisHistory, User.username).outerjoin(
+    
+    #option 1: Show only flagged content
+    # flagged = db.session.query(AnalysisHistory, User.username).outerjoin(
+    #     User, AnalysisHistory.user_id == User.id
+    # ).filter(
+    #     AnalysisHistory.predicted_label.in_(["sarcasm/joke", "hate"])
+    # ).order_by(AnalysisHistory.timestamp.desc()).all()
+
+    #option 2: Show all analyzed content
+    all_content = db.session.query(AnalysisHistory, User.username).outerjoin(
         User, AnalysisHistory.user_id == User.id
-    ).filter(
-        AnalysisHistory.predicted_label.in_(["offensive", "hate"])
-    ).order_by(AnalysisHistory.timestamp.desc()).all()
+    ).order_by(AnalysisHistory.timestamp.desc()).limit(100).all()  #limit for performance
 
     stats = get_moderator_stats()
 
-    return render_template("moderator_dashboard.html", flagged=flagged, stats=stats)
+    return render_template("moderator_dashboard.html", all_content=all_content, stats=stats)
 
 @app.route('/moderator/export')
 @login_required
@@ -884,16 +928,27 @@ def export_flagged():
     if current_user.role != "moderator":
         abort(403)
     
-    # Join with User table to get usernames
-    flagged = db.session.query(AnalysisHistory, User.username).outerjoin(
-        User, AnalysisHistory.user_id == User.id
-    ).filter(
-        AnalysisHistory.predicted_label.in_(["offensive", "hate"])
-    ).order_by(AnalysisHistory.timestamp.desc()).all()
+    #option to export all content or just flagged
+    export_all = request.args.get('all', 'false').lower() == 'true'
+    
+    if export_all:
+        #export all analyzed content
+        content = db.session.query(AnalysisHistory, User.username).outerjoin(
+            User, AnalysisHistory.user_id == User.id
+        ).order_by(AnalysisHistory.timestamp.desc()).all()
+        filename = 'all_analysis_reports.csv'
+    else:
+        #export only flagged content
+        content = db.session.query(AnalysisHistory, User.username).outerjoin(
+            User, AnalysisHistory.user_id == User.id
+        ).filter(
+            AnalysisHistory.predicted_label.in_(["sarcasm/joke", "hate"])
+        ).order_by(AnalysisHistory.timestamp.desc()).all()
+        filename = 'flagged_reports.csv'
 
     output = []
     output.append(['User', 'Tweet', 'Label', 'Explanation', 'Timestamp'])
-    for item, username in flagged:
+    for item, username in content:
         output.append([
             username if username else 'Anonymous',
             item.tweet_text,
@@ -903,7 +958,7 @@ def export_flagged():
         ])
 
     response = make_response('\n'.join([','.join(map(str, row)) for row in output]))
-    response.headers['Content-Disposition'] = 'attachment; filename=flagged_reports.csv'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
     response.headers['Content-Type'] = 'text/csv'
     return response
 

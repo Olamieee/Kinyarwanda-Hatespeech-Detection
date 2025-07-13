@@ -4,12 +4,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="../css/moderator_dashboard.css">
+  <link rel="stylesheet" href="../static/css/moderator_dashboard.css">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <title>Moderator Dashboard - Kinyarwanda Hate Speech Detection</title>
 </head>
+
 <body>
   <div class="bg-animation"></div>
   <div class="header">
@@ -19,7 +20,10 @@
       </h1>
       <div class="header-actions">
         <a href="{{ url_for('export_flagged') }}" class="header-btn export">
-          📊 Export CSV
+          📊 Export Flagged
+        </a>
+        <a href="{{ url_for('export_flagged', all='true') }}" class="header-btn export">
+          📊 Export All
         </a>
         <a href="{{ url_for('logout') }}" class="header-btn danger">
           🚪 Logout
@@ -61,123 +65,106 @@
       </div>
 
       <!-- Detailed Stats -->
-      <div class="detailed-stats">
-        <div class="detail-card">
-          <h3>📊 Flagged by Label</h3>
-          <ul class="detail-list">
-            {% for label, count in stats.counts_by_label.items() %}
-            <li>
-              <span>{{ label }}</span>
-              <span class="detail-value">{{ count }}</span>
-            </li>
-            {% endfor %}
-          </ul>
-        </div>
+      <div class="detail-card">
+        <h3>📊 All Predictions</h3>
+        <ul class="detail-list">
+          {% for label, count in stats.counts_by_label.items() %}
+          <li>
+            <span>{{ label }}</span>
+            <span class="detail-value">{{ count }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
 
-        <div class="detail-card">
-          <h3>👥 Top 5 Users</h3>
-          <ul class="detail-list">
-            {% for username, count in stats.top_users %}
-            <li>
-              <span>{{ username }}</span>
-              <span class="detail-value">{{ count }}</span>
-            </li>
-            {% endfor %}
-          </ul>
-        </div>
+      <div class="detail-card">
+        <h3>👥 Top 5 Users</h3>
+        <ul class="detail-list">
+          {% for username, count in stats.top_users %}
+          <li>
+            <span>{{ username }}</span>
+            <span class="detail-value">{{ count }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
 
-        <div class="detail-card">
-          <h3>💬 Top Flagged Words</h3>
-          <ul class="detail-list">
-            {% for word, freq in stats.top_words %}
-            <li>
-              <span>{{ word }}</span>
-              <span class="detail-value">{{ freq }}</span>
-            </li>
-            {% endfor %}
-          </ul>
-        </div>
+      <div class="detail-card">
+        <h3>💬 Top Flagged Words</h3>
+        <ul class="detail-list">
+          {% for word, freq in stats.top_words %}
+          <li>
+            <span>{{ word }}</span>
+            <span class="detail-value">{{ freq }}</span>
+          </li>
+          {% endfor %}
+        </ul>
       </div>
     </div>
+  </div>
 
-    <!-- Flagged Content Section -->
-    <div class="flagged-section fade-in">
-      <div class="flagged-header">
-        <h2>⚠️ Flagged Content</h2>
-      </div>
-      <div class="flagged-content">
-        {% if flagged %}
-        {% for item, username in flagged %}
-        <div class="flagged-item">
-          <div class="flagged-meta">
-            <span class="user-id">
-              {% if username %}
-              {{ username }}
-              {% else %}
-              Anonymous
-              {% endif %}
-            </span>
-            <span class="timestamp">{{ item.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</span>
-          </div>
-          <div class="flagged-text">{{ item.tweet_text }}</div>
-          <div class="flagged-details">
-            <span class="label-badge">{{ item.predicted_label }}</span>
-            {% if item.explanation_words %}
-            <span class="explanation">Explanation: {{ item.explanation_words }}</span>
+  <!-- Flagged Content Section -->
+  <div class="flagged-section fade-in">
+    <div class="flagged-header">
+      <h2>📋 All Analyzed Content</h2>
+    </div>
+    <div class="flagged-content">
+      {% if all_content %}
+      {% for item, username in all_content %}
+      <div class="flagged-item">
+        <div class="flagged-meta">
+          <span class="user-id">
+            {% if username %}
+            {{ username }}
+            {% else %}
+            Anonymous
             {% endif %}
-          </div>
+          </span>
+          <span class="timestamp">{{ item.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</span>
         </div>
-        {% endfor %}
-        {% else %}
-        <div class="no-flagged">
-          <h3>✅ No flagged content found!</h3>
-          <p>All content is safe and within guidelines.</p>
+        <div class="flagged-text">{{ item.tweet_text }}</div>
+        <div class="flagged-details">
+          <span class="label-badge" data-label="{{ item.predicted_label.lower() }}">{{ item.predicted_label }}</span>
+          {% if item.explanation_words %}
+          <span class="explanation">Explanation: {{ item.explanation_words }}</span>
+          {% endif %}
         </div>
-        {% endif %}
       </div>
+      {% endfor %}
+      {% else %}
+     <div class="no-flagged">
+        <h3>📭 No analyzed content found!</h3>
+        <p>No content has been processed yet.</p>
+      </div>
+      {% endif %}
     </div>
+  </div>
 
-    <script>
-      // Intersection Observer for fade-in animations
-      const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-      };
+  <script>
+    // Intersection Observer for fade-in animations
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
 
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('visible');
-          }
-        });
-      }, observerOptions);
-
-      // Observe all fade-in elements
-      document.querySelectorAll('.fade-in').forEach(el => {
-        observer.observe(el);
-      });
-
-      /* Uncomment this section to enable sticky header:
-      
-      // Dynamic navbar background for sticky header
-      window.addEventListener('scroll', () => {
-        const header = document.querySelector('.header');
-        if (window.scrollY > 100) {
-          header.classList.add('scrolled');
-        } else {
-          header.classList.remove('scrolled');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
         }
       });
-      
-      // Add padding to body to account for fixed header
-      document.body.style.paddingTop = '0'; // Change to header height when sticky
-      
-      */
+    }, observerOptions);
 
-      // Add some particle effects for extra flair
-      function createParticle() {
-        const particle = document.createElement('div');
-        particle.style.cssText = `
+    // Observe all fade-in elements
+    document.querySelectorAll('.fade-in').forEach(el => {
+      observer.observe(el);
+    });
+
+
+    // Add some particle effects for extra flair
+    function createParticle() {
+      const particle = document.createElement('div');
+      particle.style.cssText = `
         position: fixed;
         width: 4px;
         height: 4px;
@@ -190,15 +177,16 @@
         top: 100%;
         opacity: 0.6;
       `;
-        document.body.appendChild(particle);
+      document.body.appendChild(particle);
 
-        setTimeout(() => {
-          particle.remove();
-        }, 6000);
-      }
+      setTimeout(() => {
+        particle.remove();
+      }, 6000);
+    }
 
-      // Create particles occasionally
-      setInterval(createParticle, 3000);
-    </script>
+    // Create particles occasionally
+    setInterval(createParticle, 3000);
+  </script>
 </body>
+
 </html>

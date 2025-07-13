@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="stylesheet" href="../static/css/dashboard.css">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -52,11 +52,11 @@
         <div class="result-section">
           <h3 class="result-title">Analysis Result</h3>
           <div class="prediction-result 
-            {% if result == 'normal' %}prediction-safe{% else %}prediction-flagged{% endif %}">
+          {% if result == 'normal' %}prediction-safe{% elif result == 'sarcasm/joke' %}prediction-sarcasm{% else %}prediction-flagged{% endif %}">
             <span>
               {% if result == 'normal' %}
               ✅ Safe Content
-              {% elif item.predicted_label == 'sarcasm/joke' %}
+              {% elif result == 'sarcasm/joke' %}
               ⚠️ Sarcasm/Joke Content
               {% elif result == 'hate' %}
               🚫 Hate Speech Detected
@@ -91,7 +91,11 @@
               "{{ item.tweet_text }}"
             </div>
             <div class="history-result">
-              <span class="history-label {{ 'label-safe' if item.predicted_label == 'normal' else 'label-flagged' }}">
+              <span class="history-label 
+              {% if item.predicted_label == 'normal' %}label-safe
+              {% elif item.predicted_label == 'sarcasm/joke' %}label-sarcasm
+              {% else %}label-flagged
+              {% endif %}">
                 {% if item.predicted_label == 'normal' %}
                 ✅ Safe Content
                 {% elif item.predicted_label == 'sarcasm/joke' %}
