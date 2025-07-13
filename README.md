@@ -43,9 +43,8 @@ project/
 |    ├── forgot_password.html
 |    ├── reset_password.html
 ├── model/
-│   ├── hate_speech_model.ipynb  # Model Notebook
-|   ├── kinyarwanda_hatespeech_noisy.csv
-|   ├── final_dataset.tsv
+│   ├── hatespeech model.ipynb  # Model Notebook
+|   ├── kinyarwanda_hatespeech_dataset_realistic.csv
 |   ├── label_encoder.pkl
 |   ├── model.pkl     # Trained logistic regression model
 |   ├── tfidf.pkl     # TF-IDF vectorizer used during training
@@ -157,7 +156,3 @@ def predict(text):
 This project is licensed under the **MIT License**.
 
 ---
-
-## 🙌 Credits
-
-Built by Olamieee — Contributions welcome!

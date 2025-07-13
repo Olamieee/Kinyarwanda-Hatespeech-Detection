@@ -56,8 +56,8 @@
             <span>
               {% if result == 'normal' %}
               ✅ Safe Content
-              {% elif result == 'offensive' %}
-              ⚠️ Offensive Content
+              {% elif item.predicted_label == 'sarcasm/joke' %}
+              ⚠️ Sarcasm/Joke Content
               {% elif result == 'hate' %}
               🚫 Hate Speech Detected
               {% else %}
@@ -94,8 +94,8 @@
               <span class="history-label {{ 'label-safe' if item.predicted_label == 'normal' else 'label-flagged' }}">
                 {% if item.predicted_label == 'normal' %}
                 ✅ Safe Content
-                {% elif item.predicted_label == 'offensive' %}
-                ⚠️ Offensive Content
+                {% elif item.predicted_label == 'sarcasm/joke' %}
+                ⚠️ Sarcasm/Joke Content
                 {% elif item.predicted_label == 'hate' %}
                 🚫 Hate Speech Detected
                 {% else %}
