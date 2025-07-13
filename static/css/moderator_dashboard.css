@@ -415,7 +415,7 @@ body {
 }
 
 .flagged-header h2 {
-  color: #ff6b6b;
+  color: #1c95c1;
   font-size: 1.75rem;
   font-weight: 800;
   display: flex;
@@ -524,31 +524,24 @@ body {
   font-size: 0.85rem;
   font-weight: 600;
   text-shadow: 0 0 10px currentColor;
-}
-
-/* Default/Hate Speech - Red */
-.label-badge {
+  /* Default/Hate Speech - Red */
   background: rgba(239, 68, 68, 0.2);
   color: #ff6b6b;
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-/* Green for non-hate/clean content */
-.label-badge.green,
-.label-badge[data-label="clean"],
-.label-badge[data-label="non-hate"] {
-  background: rgba(34, 197, 94, 0.2);
-  color: #22c55e;
-  border: 1px solid rgba(34, 197, 94, 0.3);
+/* Green for normal content */
+.label-badge[data-label="normal"] {
+  background: rgba(34, 197, 94, 0.2) !important;
+  color: #22c55e !important;
+  border: 1px solid rgba(34, 197, 94, 0.3) !important;
 }
 
 /* Deep Orange for sarcasm/joke */
-.label-badge.orange,
-.label-badge[data-label="sarcasm"],
-.label-badge[data-label="joke"] {
-  background: rgba(255, 124, 42, 0.2);
-  color: #ff7c2a;
-  border: 1px solid rgba(255, 124, 42, 0.3);
+.label-badge[data-label="sarcasm/joke"] {
+  background: rgba(255, 124, 42, 0.2) !important;
+  color: #ff7c2a !important;
+  border: 1px solid rgba(255, 124, 42, 0.3) !important;
 }
 
 .explanation {
