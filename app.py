@@ -4,8 +4,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Message, Mail
 from datetime import datetime, timedelta
-import joblib, re, random, string, time, secrets, requests
-import numpy as np
+import re, random, string, time, secrets, requests, joblib
 from sqlalchemy import func
 import logging
 from dotenv import load_dotenv
@@ -13,10 +12,13 @@ import os
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+import traceback
 from flask_cors import CORS
 from flask_session import Session
 import urllib.parse
 import json
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
 
 load_dotenv()
 
@@ -150,11 +152,16 @@ combined_stopwords = kinyarwanda_stopwords.union(ENGLISH_STOP_WORDS)
 extra_stopwords = {"lol", "lmao", "smh", "bruh", "nah", "omg", "uhh", "hmm", "yo", "yup"}
 combined_stopwords = combined_stopwords.union(extra_stopwords)
 
-#Load models
-model = joblib.load('model/lr_model.pkl')
-vectorizer = joblib.load('model/tfidf.pkl')
-label_encoder = joblib.load('model/label_encoder.pkl')
+# Load model and tokenizer
+model_path = "model/kinyarwanda-hatespeech-model"
+tokenizer = AutoTokenizer.from_pretrained(model_path)
+model = AutoModelForSequenceClassification.from_pretrained(model_path, torch_dtype=torch.float16)
+label_encoder = joblib.load('model/kinyarwanda-hatespeech-model/label_encoder.pkl')
 
+# Device config
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+model.eval()
 #Models
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -189,63 +196,68 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
-kinyarwanda_stopwords = set([
-    "na", "ku", "mu", "ya", "y'", "n'", "bya", "cyane", "rwose",
-    "kandi", "ubwo", "uko", "ntacyo", "ntukwiye"
-])
+# kinyarwanda_stopwords = set([
+#     "na", "ku", "mu", "ya", "y'", "n'", "bya", "cyane", "rwose",
+#     "kandi", "ubwo", "uko", "ntacyo", "ntukwiye"
+# ])
 
-#Combine both sets
-combined_stopwords = kinyarwanda_stopwords.union(ENGLISH_STOP_WORDS)
-extra_stopwords = {"lol", "lmao", "smh", "bruh", "nah", "omg", "uhh", "hmm", "yo", "yup"}
-combined_stopwords = combined_stopwords.union(extra_stopwords)
+# #Combine both sets
+# combined_stopwords = kinyarwanda_stopwords.union(ENGLISH_STOP_WORDS)
+# extra_stopwords = {"lol", "lmao", "smh", "bruh", "nah", "omg", "uhh", "hmm", "yo", "yup"}
+# combined_stopwords = combined_stopwords.union(extra_stopwords)
 
 def preprocess_text(text):
     if not isinstance(text, str):
         return ""
     text = text.lower()
-    text = re.sub(r'@\w+|http\S+|\d+', '', text)
-    text = re.sub(r'[^\w\s]', '', text)
-    text = re.sub(r'\s+', ' ', text).strip()
-    
-    words = text.split()
-    words = [word for word in words if word not in combined_stopwords]
-    
-    return ' '.join(words)
+    text = re.sub(r"[^\w\s]", "", text)
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"(.)\1{2,}", r"\1\1", text)
+    return text.strip()
 
-def get_explanation_words_lr(text, model, vectorizer, predicted_class, top_n=5):
-    """Get explanation using logistic regression coefficients"""
+def get_explanation_words_transformer(text, tokenizer, model, top_n=5):
+    """Get important words using transformer attention weights"""
     try:
-        #Get feature names and coefficients
-        feature_names = vectorizer.get_feature_names_out()
-        coefficients = model.coef_[predicted_class]  #Get coefficients for predicted class
+        # Tokenize input text
+        inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
+        inputs = {k: v.to(device) for k, v in inputs.items()}  # Move inputs to device
+        input_ids = inputs['input_ids']
+        attention_mask = inputs['attention_mask']
+
+        # Forward pass with gradient tracking for attention
+        with torch.no_grad():
+            outputs = model(**inputs, output_attentions=True)
+            attentions = outputs.attentions[-1]  # Last layer attentions
+            logits = outputs.logits
+            pred = torch.argmax(logits, dim=1).item()
+
+        # Average attention weights across heads
+        avg_attention = torch.mean(attentions, dim=1).squeeze(0)  # Shape: (seq_len, seq_len)
+        token_scores = torch.sum(avg_attention, dim=1)  # Sum attention for each token
+
+        # Get token IDs and their scores
+        tokens = tokenizer.convert_ids_to_tokens(input_ids.squeeze(0))
+        token_importance = [(token, score.item()) for token, score in zip(tokens, token_scores) if token not in ['[CLS]', '[SEP]', '[PAD]']]
+
+        # Filter out subword tokens and sort by importance
+        words = []
+        for token, score in token_importance:
+            if not token.startswith('##'):
+                word = token.replace('▁', '')  # Handle sentencepiece tokenization
+                if word.strip() and word not in combined_stopwords:
+                    words.append((word, score))
         
-        # Transform the input text
-        cleaned = preprocess_text(text)
-        vec = vectorizer.transform([cleaned])
-        feature_indices = vec.nonzero()[1]
-        
-        word_importance = []
-        for idx in feature_indices:
-            word = feature_names[idx]
-            coef = coefficients[idx]
-            tfidf_val = vec[0, idx]
-            importance = abs(coef * tfidf_val)  #Use absolute value
-            word_importance.append((word, importance))
-        
-        #Sort by importance and return top words
-        word_importance.sort(key=lambda x: x[1], reverse=True)
-        explanation_words = [word for word, _ in word_importance[:top_n]]
+        # Sort by importance and select top N
+        words.sort(key=lambda x: x[1], reverse=True)
+        explanation_words = [word for word, _ in words[:top_n]]
         
         return explanation_words
-        
     except Exception as e:
-        print(f"LR explanation failed: {e}")
-        #Fallback to simple word extraction
-        cleaned = preprocess_text(text)
-        words = cleaned.split()
-        feature_names = vectorizer.get_feature_names_out()
-        vocab_words = [word for word in words if word in feature_names]
-        return list(dict.fromkeys(vocab_words))[:top_n]
+        print(f"Transformer explanation failed: {e}")
+        traceback.print_exc()
+        # Fallback to simple word extraction
+        words = text.split() if isinstance(text, str) else []
+        return list(dict.fromkeys([w for w in words if w not in combined_stopwords]))[:top_n]
         
 def generate_code(length=7):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
@@ -422,7 +434,7 @@ def get_moderator_stats():
     
     total_analyzed = AnalysisHistory.query.count()   #show all predictions
     total_flagged = AnalysisHistory.query.filter(
-        AnalysisHistory.predicted_label.in_(["sarcasm/joke", "hate"])
+        AnalysisHistory.predicted_label.in_(["sarcasm", "hate"])
     ).count()
 
     counts_by_label = db.session.query( #get counts for all labels
@@ -436,7 +448,7 @@ def get_moderator_stats():
     ).join(
         AnalysisHistory, User.id == AnalysisHistory.user_id
     ).filter(
-        AnalysisHistory.predicted_label.in_(["sarcasm/joke", "hate"])
+        AnalysisHistory.predicted_label.in_(["sarcasm", "hate"])
     ).group_by(User.username).order_by(func.count(AnalysisHistory.id).desc()).limit(5).all()
 
     top_users_overall = db.session.query( #show most active users overall
@@ -447,7 +459,7 @@ def get_moderator_stats():
     ).group_by(User.username).order_by(func.count(AnalysisHistory.id).desc()).limit(5).all()
 
     explanations = AnalysisHistory.query.with_entities(AnalysisHistory.explanation_words).filter(
-        AnalysisHistory.predicted_label.in_(["sarcasm/joke", "hate"]) #get explanation words from all flagged content
+        AnalysisHistory.predicted_label.in_(["sarcasm", "hate"]) #get explanation words from all flagged content
     ).all()
     word_freq = {}
     for (expl,) in explanations:
@@ -459,7 +471,7 @@ def get_moderator_stats():
 
     week_ago = datetime.utcnow() - timedelta(days=7)
     flagged_week = AnalysisHistory.query.filter(
-        AnalysisHistory.predicted_label.in_(["sarcasm/joke", "hate"]),
+        AnalysisHistory.predicted_label.in_(["sarcasm", "hate"]),
         AnalysisHistory.timestamp >= week_ago
     ).count()
 
@@ -498,6 +510,7 @@ def register():
     if request.method == 'POST':
         entered_secret = request.form.get('secret_word', '')
         SECRET_WORD = "jollofsweet"  #secretword
+        role = request.form.get('role', 'user')  # Define role early
 
         if role == "moderator" and entered_secret != SECRET_WORD:
             flash("Invalid secret word. Please sign up as a regular user.", "danger")
@@ -867,25 +880,29 @@ def dashboard():
             flash("Please enter text to analyze.", "warning")
             return redirect(url_for('dashboard'))
 
-        cleaned = preprocess_text(raw_text)
         print(f"DEBUG - Raw text: {raw_text}")
-        print(f"DEBUG - Cleaned text: {cleaned}")
-            
-        vec = vectorizer.transform([cleaned])
-        print(f"DEBUG - Vector shape: {vec.shape}")
+        
+        # Tokenize input for transformer model
+        inputs = tokenizer(raw_text, return_tensors="pt", truncation=True, padding=True, max_length=512)
+        inputs = {k: v.to(device) for k, v in inputs.items()}  # Move inputs to device
+        print(f"DEBUG - Input IDs shape: {inputs['input_ids'].shape}")
 
-        proba = model.predict_proba(vec)[0]
-        pred = np.argmax(proba)
-            
-        print(f"DEBUG - Prediction probabilities: {proba}")
-        print(f"DEBUG - Max probability: {max(proba)} at index: {pred}")
+        # Get model prediction
+        with torch.no_grad():
+            outputs = model(**inputs)
+            logits = outputs.logits
+            proba = torch.softmax(logits, dim=1).squeeze(0)
+            pred = torch.argmax(logits, dim=1).item()
+        
+        print(f"DEBUG - Prediction probabilities: {proba.tolist()}")
+        print(f"DEBUG - Max probability: {max(proba).item()} at index: {pred}")
         print(f"DEBUG - Model prediction (numeric): {pred}")
         print(f"DEBUG - Label encoder classes: {label_encoder.classes_}")
-            
+        
         label = label_encoder.inverse_transform([pred])[0]
         print(f"DEBUG - Final label: {label}")
         
-        explanation_words = get_explanation_words_lr(raw_text, model, vectorizer, pred)
+        explanation_words = get_explanation_words_transformer(raw_text, tokenizer, model)
 
         db.session.add(AnalysisHistory(
             user_id=current_user.id,
@@ -910,7 +927,7 @@ def moderator_dashboard():
     # flagged = db.session.query(AnalysisHistory, User.username).outerjoin(
     #     User, AnalysisHistory.user_id == User.id
     # ).filter(
-    #     AnalysisHistory.predicted_label.in_(["sarcasm/joke", "hate"])
+    #     AnalysisHistory.predicted_label.in_(["sarcasm", "hate"])
     # ).order_by(AnalysisHistory.timestamp.desc()).all()
 
     #option 2: Show all analyzed content
@@ -942,7 +959,7 @@ def export_flagged():
         content = db.session.query(AnalysisHistory, User.username).outerjoin(
             User, AnalysisHistory.user_id == User.id
         ).filter(
-            AnalysisHistory.predicted_label.in_(["sarcasm/joke", "hate"])
+            AnalysisHistory.predicted_label.in_(["sarcasm", "hate"])
         ).order_by(AnalysisHistory.timestamp.desc()).all()
         filename = 'flagged_reports.csv'
 
@@ -969,24 +986,28 @@ def api_analyze():
         return jsonify({'error': 'Missing text'}), 400
 
     raw_text = request.json['text']
-    cleaned = preprocess_text(raw_text)
     print(f"DEBUG - Raw text: {raw_text}")
-    print(f"DEBUG - Cleaned text: {cleaned}")
-        
-    vec = vectorizer.transform([cleaned])
-    print(f"DEBUG - Vector shape: {vec.shape}")
 
-    proba = model.predict_proba(vec)[0]
-    pred = np.argmax(proba)
-        
-    print(f"DEBUG - Prediction probabilities: {proba}")
-    print(f"DEBUG - Max probability: {max(proba)} at index: {pred}")
+    # Tokenize input for transformer model
+    inputs = tokenizer(raw_text, return_tensors="pt", truncation=True, padding=True, max_length=512)
+    inputs = {k: v.to(device) for k, v in inputs.items()}  # Move inputs to device
+    print(f"DEBUG - Input IDs shape: {inputs['input_ids'].shape}")
+
+    # Get model prediction
+    with torch.no_grad():
+        outputs = model(**inputs)
+        logits = outputs.logits
+        proba = torch.softmax(logits, dim=1).squeeze(0)
+        pred = torch.argmax(logits, dim=1).item()
+
+    print(f"DEBUG - Prediction probabilities: {proba.tolist()}")
+    print(f"DEBUG - Max probability: {max(proba).item()} at index: {pred}")
     print(f"DEBUG - Model prediction (numeric): {pred}")
     print(f"DEBUG - Label encoder classes: {label_encoder.classes_}")
-        
+
     label = label_encoder.inverse_transform([pred])[0]
     print(f"DEBUG - Final label: {label}")
-    explanation_words = get_explanation_words_lr(raw_text, model, vectorizer, pred)
+    explanation_words = get_explanation_words_transformer(raw_text, tokenizer, model)
 
     db.session.add(AnalysisHistory(
         user_id=current_user.id,
@@ -1019,37 +1040,38 @@ def api_analyze_public():
         if len(raw_text) > 1000:  # Limit text length
             return jsonify({'error': 'Text too long (max 1000 characters)'}), 400
 
-        # Process the text
-        cleaned = preprocess_text(raw_text)
-        print(f"DEBUG - Raw text: {raw_text}")
-        print(f"DEBUG - Cleaned text: {cleaned}")
-        
-        # Check if cleaned text is empty
-        if not cleaned:
+        # Tokenize input for transformer model
+        inputs = tokenizer(raw_text, return_tensors="pt", truncation=True, padding=True, max_length=512)
+        inputs = {k: v.to(device) for k, v in inputs.items()}  # Move inputs to device
+        print(f"DEBUG - Input IDs shape: {inputs['input_ids'].shape}")
+
+        # Check if input is empty or only stopwords/special tokens
+        if inputs['input_ids'].shape[1] <= 2:  # Only [CLS] and [SEP] tokens
             return jsonify({
                 'prediction': 'normal',
                 'explanation': [],
                 'status': 'success',
                 'message': 'No analyzable content found'
             })
-        
-        vec = vectorizer.transform([cleaned])
-        print(f"DEBUG - Vector shape: {vec.shape}")
-        # Get prediction probabilities and use the class with highest probability
-        proba = model.predict_proba(vec)[0]
-        pred = np.argmax(proba)
-        
-        print(f"DEBUG - Prediction probabilities: {proba}")
-        print(f"DEBUG - Max probability: {max(proba)} at index: {pred}")
+
+        # Get model prediction
+        with torch.no_grad():
+            outputs = model(**inputs)
+            logits = outputs.logits
+            proba = torch.softmax(logits, dim=1).squeeze(0)
+            pred = torch.argmax(logits, dim=1).item()
+
+        print(f"DEBUG - Prediction probabilities: {proba.tolist()}")
+        print(f"DEBUG - Max probability: {max(proba).item()} at index: {pred}")
         print(f"DEBUG - Model prediction (numeric): {pred}")
         print(f"DEBUG - Label encoder classes: {label_encoder.classes_}")
-        
+
         label = label_encoder.inverse_transform([pred])[0]
         print(f"DEBUG - Final label: {label}")
 
-        explanation_words = get_explanation_words_lr(raw_text, model, vectorizer, pred)
+        explanation_words = get_explanation_words_transformer(raw_text, tokenizer, model)
 
-        #log anonymous usage
+        # Log anonymous usage
         try:
             db.session.add(AnalysisHistory(
                 user_id=None,
@@ -1070,7 +1092,7 @@ def api_analyze_public():
             'debug': {
                 'numeric_prediction': int(pred),
                 'probabilities': proba.tolist(),
-                'cleaned_text': cleaned,
+                'cleaned_text': raw_text,  # Use raw_text since preprocessing is handled by tokenizer
                 'confidence': float(max(proba))
             }
         }

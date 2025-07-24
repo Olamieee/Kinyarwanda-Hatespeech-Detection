@@ -52,12 +52,12 @@
         <div class="result-section">
           <h3 class="result-title">Analysis Result</h3>
           <div class="prediction-result 
-          {% if result == 'normal' %}prediction-safe{% elif result == 'sarcasm/joke' %}prediction-sarcasm{% else %}prediction-flagged{% endif %}">
+          {% if result == 'normal' %}prediction-safe{% elif result == 'sarcasm' %}prediction-sarcasm{% else %}prediction-flagged{% endif %}">
             <span>
               {% if result == 'normal' %}
               ✅ Safe Content
-              {% elif result == 'sarcasm/joke' %}
-              ⚠️ Sarcasm/Joke Content
+              {% elif result == 'sarcasm' %}
+              ⚠️ Sarcasm Content
               {% elif result == 'hate' %}
               🚫 Hate Speech Detected
               {% else %}
@@ -93,13 +93,13 @@
             <div class="history-result">
               <span class="history-label 
               {% if item.predicted_label == 'normal' %}label-safe
-              {% elif item.predicted_label == 'sarcasm/joke' %}label-sarcasm
+              {% elif item.predicted_label == 'sarcasm' %}label-sarcasm
               {% else %}label-flagged
               {% endif %}">
                 {% if item.predicted_label == 'normal' %}
                 ✅ Safe Content
-                {% elif item.predicted_label == 'sarcasm/joke' %}
-                ⚠️ Sarcasm/Joke Content
+                {% elif item.predicted_label == 'sarcasm' %}
+                ⚠️ Sarcasm Content
                 {% elif item.predicted_label == 'hate' %}
                 🚫 Hate Speech Detected
                 {% else %}

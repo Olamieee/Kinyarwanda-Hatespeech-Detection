@@ -537,8 +537,8 @@ body {
   border: 1px solid rgba(34, 197, 94, 0.3) !important;
 }
 
-/* Deep Orange for sarcasm/joke */
-.label-badge[data-label="sarcasm/joke"] {
+/* Deep Orange for sarcasm */
+.label-badge[data-label="sarcasm"] {
   background: rgba(255, 124, 42, 0.2) !important;
   color: #ff7c2a !important;
   border: 1px solid rgba(255, 124, 42, 0.3) !important;
