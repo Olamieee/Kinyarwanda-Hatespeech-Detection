@@ -141,21 +141,20 @@ def validate_password(password):
     
     return True, ""
 
-#Stopwords
-kinyarwanda_stopwords = set([
-    "na", "ku", "mu", "ya", "y'", "n'", "bya", "cyane", "rwose",
-    "kandi", "ubwo", "uko", "ntacyo", "ntukwiye"
-])
+# #Stopwords
+# kinyarwanda_stopwords = set([
+#     "na", "ku", "mu", "ya", "y'", "n'", "bya", "cyane", "rwose",
+#     "kandi", "ubwo", "uko", "ntacyo", "ntukwiye"
+# ])
 
-#Combine both sets
-combined_stopwords = kinyarwanda_stopwords.union(ENGLISH_STOP_WORDS)
-extra_stopwords = {"lol", "lmao", "smh", "bruh", "nah", "omg", "uhh", "hmm", "yo", "yup"}
-combined_stopwords = combined_stopwords.union(extra_stopwords)
+# #Combine both sets
+# combined_stopwords = kinyarwanda_stopwords.union(ENGLISH_STOP_WORDS)
+# extra_stopwords = {"lol", "lmao", "smh", "bruh", "nah", "omg", "uhh", "hmm", "yo", "yup"}
+# combined_stopwords = combined_stopwords.union(extra_stopwords)
 
 # Load model and tokenizer
-model_path = "model/kinyarwanda-hatespeech-model"
-tokenizer = AutoTokenizer.from_pretrained(model_path)
-model = AutoModelForSequenceClassification.from_pretrained(model_path, torch_dtype=torch.float16)
+model_path = "./models/kinyarwanda-hatespeech-model"
+tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
 label_encoder = joblib.load('model/kinyarwanda-hatespeech-model/label_encoder.pkl')
 
 # Device config
@@ -1113,9 +1112,9 @@ def api_analyze_public():
 def clear_session():
     session.clear()
     return "Session cleared!"
-
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
         logging.info("Database tables created successfully")
-    app.run(debug=True)
+    port = int(os.getenv("PORT", 5000))  # Use PORT from environment, default to 5000 for local testing
+    app.run(host="0.0.0.0", port=port, debug=True)
