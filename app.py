@@ -9,7 +9,6 @@ from sqlalchemy import func
 import logging
 from dotenv import load_dotenv
 import os
-from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import traceback
@@ -22,13 +21,13 @@ import torch
 
 load_dotenv()
 
-#Setup logging
+# Setup logging
 logging.basicConfig(level=logging.DEBUG)
 
-#Create Flask app
+# Create Flask app
 app = Flask(__name__)
 
-#Secret key setup
+# Secret key setup
 SECRET_KEY = os.getenv('SECRET_KEY')
 if not SECRET_KEY:
     SECRET_KEY = secrets.token_hex(32)
@@ -39,13 +38,13 @@ app.secret_key = SECRET_KEY
 app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
 
-#Session configuration
+# Session configuration
 app.config['SESSION_COOKIE_SECURE'] = os.getenv('RENDER') is not None  # True in production
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
-#Enable CORS for the extension with proper session support
+# Enable CORS for the extension with proper session support
 CORS(app, 
      supports_credentials=True,
      resources={
@@ -64,18 +63,18 @@ CORS(app,
          }
      })
 
-#Rate limiter
+# Rate limiter
 limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["100 per minute"]
 )
 
-#Check Google OAuth credentials
+# Check Google OAuth credentials
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET')
 
-#Define GOOGLE_AUTH_ENABLED before using it anywhere
+# Define GOOGLE_AUTH_ENABLED before using it anywhere
 GOOGLE_AUTH_ENABLED = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
 
 if not GOOGLE_AUTH_ENABLED:
@@ -83,17 +82,17 @@ if not GOOGLE_AUTH_ENABLED:
 else:
     logging.info("Google OAuth credentials loaded successfully.")
 
-#Base URL function
+# Base URL function
 def get_base_url():
     """Get base URL based on environment"""
     if os.getenv('RENDER'):
         return f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}"
-    return os.getenv('BASE_URL', 'http://127.0.0.1:5000') #for local development
+    return os.getenv('BASE_URL', 'http://127.0.0.1:5000') # for local development
 
 BASE_URL = get_base_url()
 logging.info(f"Using base URL: {BASE_URL}")
 
-#Google OAuth Configuration
+# Google OAuth Configuration
 GOOGLE_OAUTH_SCOPES = [
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/userinfo.profile',
@@ -102,7 +101,7 @@ GOOGLE_OAUTH_SCOPES = [
 
 SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
 
-#Database config
+# Database config
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///kinyaai.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -111,7 +110,7 @@ with app.app_context():
     db.create_all()
     logging.info("Database tables created successfully")
 
-#Login setup
+# Login setup
 login_manager = LoginManager()
 login_manager.login_view = "login"
 login_manager.init_app(app)
@@ -138,40 +137,33 @@ def validate_password(password):
     
     if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
         return False, "Password must contain at least one special character"
-    #Check for common passwords
+    # Check for common passwords
     common_passwords = ['password', '123456', 'password123', 'admin', 'qwerty', 'letmein']
     if password.lower() in common_passwords:
         return False, "Password is too common. Please choose a stronger password"
     
     return True, ""
 
-# #Stopwords
-# kinyarwanda_stopwords = set([
-#     "na", "ku", "mu", "ya", "y'", "n'", "bya", "cyane", "rwose",
-#     "kandi", "ubwo", "uko", "ntacyo", "ntukwiye"
-# ])
-
-# #Combine both sets
-# combined_stopwords = kinyarwanda_stopwords.union(ENGLISH_STOP_WORDS)
-# extra_stopwords = {"lol", "lmao", "smh", "bruh", "nah", "omg", "uhh", "hmm", "yo", "yup"}
-# combined_stopwords = combined_stopwords.union(extra_stopwords)
-
-
-# Load model and tokenizer
-model_path = "./model/kinyarwanda-hatespeech-model"
+# Load model and tokenizer from Hugging Face
+model_path = "kinyaAi/model/kinyarwanda-hatespeech-model"
+label_encoder_path = "kinyaAi/model/kinyarwanda-hatespeech-model/label_encoder.pkl"
 try:
-    tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
-    model = AutoModelForSequenceClassification.from_pretrained(model_path, local_files_only=True)
-    label_encoder = joblib.load('./model/kinyarwanda-hatespeech-model/label_encoder.pkl')
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    model = AutoModelForSequenceClassification.from_pretrained(model_path)
+    if label_encoder_path.startswith("http"):
+        response = requests.get(label_encoder_path)
+        label_encoder = joblib.load(BytesIO(response.content))
+    else:
+        label_encoder = joblib.load(label_encoder_path)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     model.eval()
-    logging.info("Model and tokenizer loaded successfully")
+    logging.info("Model, tokenizer, and label encoder loaded successfully from Hugging Face")
 except Exception as e:
-    logging.error(f"Failed to load model or tokenizer: {e}")
+    logging.error(f"Failed to load model, tokenizer, or label encoder: {e}")
     raise
 
-#Models Classes
+# Models Classes
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     full_name = db.Column(db.String(100), nullable=False)
@@ -196,7 +188,6 @@ class AnalysisHistory(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Allow anonymous access
     tweet_text = db.Column(db.Text, nullable=False)
     predicted_label = db.Column(db.String(50))
-    explanation_words = db.Column(db.String(300))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     source = db.Column(db.String(50), default="web")  # Track source: web, extension, api
 
@@ -204,73 +195,18 @@ class AnalysisHistory(db.Model):
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-
-# kinyarwanda_stopwords = set([
-#     "na", "ku", "mu", "ya", "y'", "n'", "bya", "cyane", "rwose",
-#     "kandi", "ubwo", "uko", "ntacyo", "ntukwiye"
-# ])
-
-# #Combine both sets
-# combined_stopwords = kinyarwanda_stopwords.union(ENGLISH_STOP_WORDS)
-# extra_stopwords = {"lol", "lmao", "smh", "bruh", "nah", "omg", "uhh", "hmm", "yo", "yup"}
-# combined_stopwords = combined_stopwords.union(extra_stopwords)
-
 def preprocess_text(text):
     if not isinstance(text, str):
         return ""
     text = text.lower()
     text = re.sub(r"[^\w\s]", "", text)
     text = re.sub(r"\s+", " ", text)
-    text = re.sub(r"(.)\\1{2,}", r"\\1\1", text)
+    text = re.sub(r"(.)\\1{2,}", r"\1\1", text)
     return text.strip()
 
-def get_explanation_words_transformer(text, tokenizer, model, top_n=5):
-    try:
-        # Apply preprocessing as in notebook
-        cleaned_text = preprocess_text(text)
-        # Tokenize input text
-        inputs = tokenizer(cleaned_text, return_tensors="pt", truncation=True, padding=True, max_length=128)  # Match notebook
-        inputs = {k: v.to(device) for k, v in inputs.items()}
-        input_ids = inputs['input_ids']
-        attention_mask = inputs['attention_mask']
-
-        # Forward pass with gradient tracking for attention
-        with torch.no_grad():
-            outputs = model(**inputs, output_attentions=True)
-            attentions = outputs.attentions[-1]
-            logits = outputs.logits
-            pred = torch.argmax(logits, dim=1).item()
-
-        # Average attention weights across heads
-        avg_attention = torch.mean(attentions, dim=1).squeeze(0)
-        token_scores = torch.sum(avg_attention, dim=1)
-
-        # Get token IDs and their scores
-        tokens = tokenizer.convert_ids_to_tokens(input_ids.squeeze(0))
-        token_importance = [(token, score.item()) for token, score in zip(tokens, token_scores) if token not in ['[CLS]', '[SEP]', '[PAD]']]
-
-        # Filter out subword tokens and sort by importance
-        words = []
-        for token, score in token_importance:
-            if not token.startswith('##'):
-                word = token.replace('▁', '')  # Handle SentencePiece
-                if word.strip():  # No stopword filtering
-                    words.append((word, score))
-
-        # Sort by importance and select top N
-        words.sort(key=lambda x: x[1], reverse=True)
-        explanation_words = [word for word, _ in words[:top_n]]
-        
-        return explanation_words
-    except Exception as e:
-        print(f"Transformer explanation failed: {e}")
-        traceback.print_exc()
-        # Fallback to simple word extraction
-        words = text.split() if isinstance(text, str) else []
-        return list(dict.fromkeys(words))[:top_n]
-        
 def generate_code(length=7):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+
 def send_email_with_sendgrid(to_email, subject, html_content, text_content):
     """Send email using SendGrid REST API"""
     if not SENDGRID_API_KEY:
@@ -307,7 +243,6 @@ def send_email_with_sendgrid(to_email, subject, html_content, text_content):
         logging.error(f"Failed to send email via SendGrid API: {e}")
         return False
 
-#send emails
 def send_verification_email(email, code):
     subject = "Your RHD verification code"
     text_content = f"""
@@ -353,7 +288,7 @@ If you didn't request this, please ignore this email.
 <p style="margin-top:20px;">– The RHD Team</p>
 """
     return send_email_with_sendgrid(email, subject, html_content, text_content)
-    
+
 # Google OAuth Helper Functions
 def get_google_auth_url():
     """Generate Google OAuth authorization URL"""
@@ -366,10 +301,10 @@ def get_google_auth_url():
         'scope': ' '.join(GOOGLE_OAUTH_SCOPES),
         'response_type': 'code',
         'access_type': 'offline',
-        'state': secrets.token_urlsafe(32)  #CSRF protection
+        'state': secrets.token_urlsafe(32)  # CSRF protection
     }
     
-    #Store state in session for verification
+    # Store state in session for verification
     session['oauth_state'] = params['state']
     
     auth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' + urllib.parse.urlencode(params)
@@ -380,12 +315,12 @@ def exchange_code_for_token(code, state):
     if not GOOGLE_AUTH_ENABLED:
         return None
     
-    #Verify state parameter (CSRF protection)
+    # Verify state parameter (CSRF protection)
     if state != session.get('oauth_state'):
         logging.error("OAuth state mismatch")
         return None
     
-    #Clear the state from session
+    # Clear the state from session
     session.pop('oauth_state', None)
     
     token_url = 'https://oauth2.googleapis.com/token'
@@ -418,12 +353,12 @@ def get_google_user_info(access_token):
         logging.error(f"Error fetching user info: {e}")
         return None
 
-#Rate limiting
+# Rate limiting
 user_last_requests = {}
 
 @app.before_request
 def rate_limit():
-    #skip rate limiting for extension API calls
+    # Skip rate limiting for extension API calls
     if request.endpoint == 'api_analyze_public':
         return
         
@@ -442,17 +377,17 @@ def rate_limit():
 def get_moderator_stats():
     total_users = User.query.count()
     
-    total_analyzed = AnalysisHistory.query.count()   #show all predictions
+    total_analyzed = AnalysisHistory.query.count()
     total_flagged = AnalysisHistory.query.filter(
         AnalysisHistory.predicted_label.in_(["sarcasm", "hate"])
     ).count()
 
-    counts_by_label = db.session.query( #get counts for all labels
+    counts_by_label = db.session.query(
         AnalysisHistory.predicted_label, func.count(AnalysisHistory.id)
     ).group_by(AnalysisHistory.predicted_label).all()
     counts_dict = {label: count for label, count in counts_by_label}
 
-    top_users_flagged = db.session.query( #show top users by total analysis activity
+    top_users_flagged = db.session.query(
         User.username,
         func.count(AnalysisHistory.id).label("flagged_count")
     ).join(
@@ -461,23 +396,12 @@ def get_moderator_stats():
         AnalysisHistory.predicted_label.in_(["sarcasm", "hate"])
     ).group_by(User.username).order_by(func.count(AnalysisHistory.id).desc()).limit(5).all()
 
-    top_users_overall = db.session.query( #show most active users overall
+    top_users_overall = db.session.query(
         User.username,
         func.count(AnalysisHistory.id).label("total_count")
     ).join(
         AnalysisHistory, User.id == AnalysisHistory.user_id
     ).group_by(User.username).order_by(func.count(AnalysisHistory.id).desc()).limit(5).all()
-
-    explanations = AnalysisHistory.query.with_entities(AnalysisHistory.explanation_words).filter(
-        AnalysisHistory.predicted_label.in_(["sarcasm", "hate"]) #get explanation words from all flagged content
-    ).all()
-    word_freq = {}
-    for (expl,) in explanations:
-        if expl:
-            words = expl.split(", ")
-            for w in words:
-                word_freq[w] = word_freq.get(w, 0) + 1
-    top_words = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:5]
 
     week_ago = datetime.utcnow() - timedelta(days=7)
     flagged_week = AnalysisHistory.query.filter(
@@ -485,7 +409,7 @@ def get_moderator_stats():
         AnalysisHistory.timestamp >= week_ago
     ).count()
 
-    weekly_by_label = db.session.query( #weekly stats for all labels
+    weekly_by_label = db.session.query(
         AnalysisHistory.predicted_label, func.count(AnalysisHistory.id)
     ).filter(
         AnalysisHistory.timestamp >= week_ago
@@ -502,7 +426,6 @@ def get_moderator_stats():
         "counts_by_label": counts_dict,
         "top_users_flagged": top_users_flagged,
         "top_users_overall": top_users_overall,
-        "top_words": top_words,
         "flagged_week": flagged_week,
         "weekly_by_label": weekly_dict,
         "avg_flagged_per_user": avg_flagged_per_user,
@@ -519,8 +442,8 @@ def index():
 def register():
     if request.method == 'POST':
         entered_secret = request.form.get('secret_word', '')
-        SECRET_WORD = "jollofsweet"  #secretword
-        role = request.form.get('role', 'user')  # Define role early
+        SECRET_WORD = "jollofsweet"  # secretword
+        role = request.form.get('role', 'user')
 
         if role == "moderator" and entered_secret != SECRET_WORD:
             flash("Invalid secret word. Please sign up as a regular user.", "danger")
@@ -531,7 +454,6 @@ def register():
         email = request.form['email']
         password = request.form['password']
         confirm_password = request.form.get('confirm_password')
-        role = request.form.get('role', 'user')
 
         # Validate password confirmation
         if password != confirm_password:
@@ -571,7 +493,6 @@ def register():
         return redirect(url_for("verify", username=username))
     return render_template("register.html", google_auth_enabled=GOOGLE_AUTH_ENABLED)
 
-
 @app.route('/verify/<username>', methods=['GET', 'POST'])
 def verify(username):
     user = User.query.filter_by(username=username).first_or_404()
@@ -582,8 +503,8 @@ def verify(username):
 
     if request.method == 'POST':
         if 'code' in request.form:
-            entered_code = request.form['code'].strip().upper()  # Add this line
-            stored_code = user.verification_code.strip().upper() if user.verification_code else ""  # Add this line
+            entered_code = request.form['code'].strip().upper()
+            stored_code = user.verification_code.strip().upper() if user.verification_code else ""
             
             if entered_code == stored_code:
                 user.is_verified = True
@@ -593,7 +514,7 @@ def verify(username):
                 login_user(user)    
                 flash("Account verified successfully! Welcome to RHD.", "success")
                 
-                if user.role == "moderator": #Redirect to appropriate dashboard based on role
+                if user.role == "moderator":
                     return redirect(url_for("moderator_dashboard"))
                 else:
                     return redirect(url_for("dashboard"))
@@ -606,7 +527,7 @@ def verify(username):
             sent = send_verification_email(user.email, new_code)
             if sent:
                 flash("Verification code resent. Please check your email.", "info")
-                session['resend_cooldown'] = time.time() + 60  #60 seconds cooldown
+                session['resend_cooldown'] = time.time() + 60  # 60 seconds cooldown
             else:
                 flash("Failed to resend code. Please try again later.", "danger")
         elif 'resend' in request.form and not can_resend:
@@ -621,9 +542,9 @@ def forgot_password():
         email = request.form['email']
         user = User.query.filter_by(email=email).first()
         
-        if user and user.password_hash:  #only for non-OAuth users
+        if user and user.password_hash:
             reset_code = generate_code()
-            user.verification_code = reset_code  #reuse verification_code field
+            user.verification_code = reset_code
             db.session.commit()
             
             sent = send_reset_email(email, reset_code)
@@ -633,7 +554,6 @@ def forgot_password():
             else:
                 flash("Failed to send reset email. Please try again.", "danger")
         else:
-            #don't reveal if email exists for security
             flash("If that email exists, you'll receive a reset code.", "info")
     
     return render_template("forgot_password.html")
@@ -659,13 +579,13 @@ def reset_password(email):
             flash("Passwords do not match.", "danger")
             return render_template("reset_password.html", email=email)
         
-        #Validate new password
+        # Validate new password
         is_valid, error_msg = validate_password(new_password)
         if not is_valid:
             flash(error_msg, "danger")
             return render_template("reset_password.html", email=email)
         
-        #Update password
+        # Update password
         user.password_hash = generate_password_hash(new_password, method='pbkdf2:sha256', salt_length=16)
         user.verification_code = None
         db.session.commit()
@@ -682,7 +602,7 @@ def login():
         password = request.form['password']
         ip_address = request.remote_addr
         
-        #Check for too many failed attempts
+        # Check for too many failed attempts
         failed_attempts = LoginAttempt.query.filter_by(
             ip_address=ip_address,
             successful=False
@@ -696,7 +616,7 @@ def login():
         
         user = User.query.filter_by(username=username).first()
         
-        #Log the attempt
+        # Log the attempt
         attempt = LoginAttempt(
             ip_address=ip_address,
             username=username,
@@ -708,7 +628,7 @@ def login():
                 flash("Please verify your email first.", "warning")
                 return redirect(url_for("verify", username=user.username))
             
-            #Mark attempt as successful
+            # Mark attempt as successful
             attempt.successful = True
             db.session.add(attempt)
             db.session.commit()
@@ -733,14 +653,12 @@ def login():
 def logout():
     logout_user()
     
-    #Clear any existing flash messages
+    # Clear any existing flash messages
     session.pop('_flashes', None)
     
     flash("Logged out successfully.", "info")
     return redirect(url_for("login"))
 
-
-#Google OAuth Routes
 @app.route('/auth/google')
 def auth_google():
     """Initiate Google OAuth"""
@@ -830,7 +748,7 @@ def auth_google_callback():
     # Get role from session (set during registration flow)
     pending_role = session.pop('pending_role', 'user')
     entered_secret = session.pop('pending_secret_word', '')
-    SECRET_WORD = "jollofsweet"  #this should be actual secret word
+    SECRET_WORD = "jollofsweet"
 
     # Validate secret word for moderator role
     if pending_role == "moderator" and entered_secret != SECRET_WORD:
@@ -853,10 +771,10 @@ def auth_google_callback():
             full_name=name or username,
             username=username,
             email=email,
-            is_verified=True,  # Google accounts are pre-verified
+            is_verified=True,
             oauth_provider="google",
             google_id=google_id,
-            role=pending_role  # Use the role from session
+            role=pending_role
         )
         db.session.add(user)
         db.session.commit()
@@ -882,7 +800,7 @@ def dashboard():
     if current_user.role != "user":
         return redirect(url_for('moderator_dashboard'))
 
-    result, explanation_words, raw_text = None, [], ""
+    result, raw_text = None, ""
 
     if request.method == 'POST':
         raw_text = request.form.get('tweet', '').strip()
@@ -915,21 +833,18 @@ def dashboard():
         
         label = label_encoder.inverse_transform([pred])[0]
         print(f"DEBUG - Final label: {label}")
-        
-        explanation_words = get_explanation_words_transformer(cleaned_text, tokenizer, model)
 
         db.session.add(AnalysisHistory(
             user_id=current_user.id,
             tweet_text=raw_text,
             predicted_label=label,
-            explanation_words=", ".join(explanation_words),
             source="web"
         ))
         db.session.commit()
         result = label
 
     history = AnalysisHistory.query.filter_by(user_id=current_user.id).order_by(AnalysisHistory.timestamp.desc()).all()
-    return render_template("dashboard.html", result=result, text=raw_text, explanation=explanation_words, history=history)
+    return render_template("dashboard.html", result=result, text=raw_text, history=history)
 
 @app.route('/moderator')
 @login_required
@@ -937,17 +852,9 @@ def moderator_dashboard():
     if current_user.role != "moderator":
         abort(403)
     
-    #option 1: Show only flagged content
-    # flagged = db.session.query(AnalysisHistory, User.username).outerjoin(
-    #     User, AnalysisHistory.user_id == User.id
-    # ).filter(
-    #     AnalysisHistory.predicted_label.in_(["sarcasm", "hate"])
-    # ).order_by(AnalysisHistory.timestamp.desc()).all()
-
-    #option 2: Show all analyzed content
     all_content = db.session.query(AnalysisHistory, User.username).outerjoin(
         User, AnalysisHistory.user_id == User.id
-    ).order_by(AnalysisHistory.timestamp.desc()).limit(100).all()  #limit for performance
+    ).order_by(AnalysisHistory.timestamp.desc()).limit(100).all()
 
     stats = get_moderator_stats()
 
@@ -959,17 +866,14 @@ def export_flagged():
     if current_user.role != "moderator":
         abort(403)
     
-    #option to export all content or just flagged
     export_all = request.args.get('all', 'false').lower() == 'true'
     
     if export_all:
-        #export all analyzed content
         content = db.session.query(AnalysisHistory, User.username).outerjoin(
             User, AnalysisHistory.user_id == User.id
         ).order_by(AnalysisHistory.timestamp.desc()).all()
         filename = 'all_analysis_reports.csv'
     else:
-        #export only flagged content
         content = db.session.query(AnalysisHistory, User.username).outerjoin(
             User, AnalysisHistory.user_id == User.id
         ).filter(
@@ -978,13 +882,12 @@ def export_flagged():
         filename = 'flagged_reports.csv'
 
     output = []
-    output.append(['User', 'Tweet', 'Label', 'Explanation', 'Timestamp'])
+    output.append(['User', 'Tweet', 'Label', 'Timestamp'])
     for item, username in content:
         output.append([
             username if username else 'Anonymous',
             item.tweet_text,
             item.predicted_label,
-            item.explanation_words or "",
             item.timestamp.strftime('%Y-%m-%d %H:%M:%S')
         ])
 
@@ -1006,20 +909,19 @@ def api_analyze():
     cleaned_text = preprocess_text(raw_text)
     print(f"DEBUG - Cleaned text: {cleaned_text}")
 
-        # Tokenize input
+    # Tokenize input
     inputs = tokenizer(cleaned_text, return_tensors="pt", truncation=True, padding=True, max_length=128)
     inputs = {k: v.to(device) for k, v in inputs.items()}
     print(f"DEBUG - Input IDs shape: {inputs['input_ids'].shape}")
 
     if inputs['input_ids'].shape[1] <= 2:
         return jsonify({
-                'prediction': 'normal',
-                'explanation': [],
-                'status': 'success',
-                'message': 'No analyzable content found'
+            'prediction': 'normal',
+            'status': 'success',
+            'message': 'No analyzable content found'
         })
 
-        # Get model prediction
+    # Get model prediction
     with torch.no_grad():
         outputs = model(**inputs)
         logits = outputs.logits
@@ -1034,22 +936,18 @@ def api_analyze():
     label = label_encoder.inverse_transform([pred])[0]
     print(f"DEBUG - Final label: {label}")
 
-    explanation_words = get_explanation_words_transformer(cleaned_text, tokenizer, model)
-
     db.session.add(AnalysisHistory(
         user_id=current_user.id,
         tweet_text=raw_text,
         predicted_label=label,
-        explanation_words=", ".join(explanation_words),
         source="api"
     ))
     db.session.commit()
 
     return jsonify({
         'prediction': label,
-        'explanation': explanation_words
+        'status': 'success'
     })
-
 
 @app.route('/api/analyze/public', methods=['POST'])
 def api_analyze_public():
@@ -1077,7 +975,6 @@ def api_analyze_public():
         if inputs['input_ids'].shape[1] <= 2:
             return jsonify({
                 'prediction': 'normal',
-                'explanation': [],
                 'status': 'success',
                 'message': 'No analyzable content found'
             })
@@ -1097,23 +994,19 @@ def api_analyze_public():
         label = label_encoder.inverse_transform([pred])[0]
         print(f"DEBUG - Final label: {label}")
 
-        explanation_words = get_explanation_words_transformer(cleaned_text, tokenizer, model)
-
         try:
             db.session.add(AnalysisHistory(
                 user_id=None,
                 tweet_text=raw_text,
                 predicted_label=label,
-                explanation_words=", ".join(explanation_words),
                 source="extension"
             ))
             db.session.commit()
         except Exception as db_error:
             print(f"Database logging error: {db_error}")
 
-        response_data = {
+        return jsonify({
             'prediction': label,
-            'explanation': explanation_words,
             'status': 'success',
             'debug': {
                 'numeric_prediction': int(pred),
@@ -1121,9 +1014,7 @@ def api_analyze_public():
                 'cleaned_text': cleaned_text,
                 'confidence': float(max(proba))
             }
-        }
-        
-        return jsonify(response_data)
+        })
 
     except Exception as e:
         logging.error(f"Error in public API: {e}")
@@ -1134,10 +1025,31 @@ def api_analyze_public():
             'status': 'error'
         }), 500
 
+@app.route('/test')
+def test_predictions():
+    test_texts = ["Umwana na se", "Abatutsi baracyariho"]
+    results = []
+    for text in test_texts:
+        cleaned_text = preprocess_text(text)
+        inputs = tokenizer(cleaned_text, return_tensors="pt", truncation=True, padding=True, max_length=128)
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+        with torch.no_grad():
+            outputs = model(**inputs)
+            logits = outputs.logits
+            pred = torch.argmax(logits, dim=1).item()
+            label = label_encoder.inverse_transform([pred])[0]
+        results.append({
+            "text": text,
+            "cleaned_text": cleaned_text,
+            "label": label
+        })
+    return jsonify(results)
+
 @app.route("/clear-session")
 def clear_session():
     session.clear()
     return "Session cleared!"
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
