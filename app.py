@@ -144,17 +144,20 @@ def validate_password(password):
     
     return True, ""
 
+# Update the model and label encoder paths
+model_path = "kinyaAi/kinyarwanda-hatespeech-model"
+label_encoder_path = "kinyaAi/kinyarwanda-hatespeech-model/raw/main/label_encoder.pkl"  # Path to label encoder in the repo
+
 # Load model and tokenizer from Hugging Face
-model_path = "kinyaAi/model/kinyarwanda-hatespeech-model"
-label_encoder_path = "kinyaAi/model/kinyarwanda-hatespeech-model/label_encoder.pkl"
 try:
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model = AutoModelForSequenceClassification.from_pretrained(model_path)
-    if label_encoder_path.startswith("http"):
-        response = requests.get(label_encoder_path)
+    # Since label_encoder.pkl is in the repo, use the raw URL
+    response = requests.get(label_encoder_path)
+    if response.status_code == 200:
         label_encoder = joblib.load(BytesIO(response.content))
     else:
-        label_encoder = joblib.load(label_encoder_path)
+        raise Exception("Failed to download label_encoder.pkl from Hugging Face")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     model.eval()
