@@ -921,7 +921,7 @@ def api_analyze():
             'message': 'No analyzable content found'
         })
 
-    # Get model prediction
+    # Get model prediction(s)
     with torch.no_grad():
         outputs = model(**inputs)
         logits = outputs.logits
