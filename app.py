@@ -107,6 +107,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///kinyaai.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
+with app.app_context():
+    db.create_all()
+    logging.info("Database tables created successfully")
+
 #Login setup
 login_manager = LoginManager()
 login_manager.login_view = "login"
@@ -152,16 +156,22 @@ def validate_password(password):
 # extra_stopwords = {"lol", "lmao", "smh", "bruh", "nah", "omg", "uhh", "hmm", "yo", "yup"}
 # combined_stopwords = combined_stopwords.union(extra_stopwords)
 
-# Load model and tokenizer
-model_path = "./models/kinyarwanda-hatespeech-model"
-tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
-label_encoder = joblib.load('model/kinyarwanda-hatespeech-model/label_encoder.pkl')
 
-# Device config
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
-model.eval()
-#Models
+# Load model and tokenizer
+model_path = "./model/kinyarwanda-hatespeech-model"
+try:
+    tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+    model = AutoModelForSequenceClassification.from_pretrained(model_path, local_files_only=True)
+    label_encoder = joblib.load('./model/kinyarwanda-hatespeech-model/label_encoder.pkl')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    model.eval()
+    logging.info("Model and tokenizer loaded successfully")
+except Exception as e:
+    logging.error(f"Failed to load model or tokenizer: {e}")
+    raise
+
+#Models Classes
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     full_name = db.Column(db.String(100), nullable=False)
@@ -211,28 +221,29 @@ def preprocess_text(text):
     text = text.lower()
     text = re.sub(r"[^\w\s]", "", text)
     text = re.sub(r"\s+", " ", text)
-    text = re.sub(r"(.)\1{2,}", r"\1\1", text)
+    text = re.sub(r"(.)\\1{2,}", r"\\1\1", text)
     return text.strip()
 
 def get_explanation_words_transformer(text, tokenizer, model, top_n=5):
-    """Get important words using transformer attention weights"""
     try:
+        # Apply preprocessing as in notebook
+        cleaned_text = preprocess_text(text)
         # Tokenize input text
-        inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
-        inputs = {k: v.to(device) for k, v in inputs.items()}  # Move inputs to device
+        inputs = tokenizer(cleaned_text, return_tensors="pt", truncation=True, padding=True, max_length=128)  # Match notebook
+        inputs = {k: v.to(device) for k, v in inputs.items()}
         input_ids = inputs['input_ids']
         attention_mask = inputs['attention_mask']
 
         # Forward pass with gradient tracking for attention
         with torch.no_grad():
             outputs = model(**inputs, output_attentions=True)
-            attentions = outputs.attentions[-1]  # Last layer attentions
+            attentions = outputs.attentions[-1]
             logits = outputs.logits
             pred = torch.argmax(logits, dim=1).item()
 
         # Average attention weights across heads
-        avg_attention = torch.mean(attentions, dim=1).squeeze(0)  # Shape: (seq_len, seq_len)
-        token_scores = torch.sum(avg_attention, dim=1)  # Sum attention for each token
+        avg_attention = torch.mean(attentions, dim=1).squeeze(0)
+        token_scores = torch.sum(avg_attention, dim=1)
 
         # Get token IDs and their scores
         tokens = tokenizer.convert_ids_to_tokens(input_ids.squeeze(0))
@@ -242,10 +253,10 @@ def get_explanation_words_transformer(text, tokenizer, model, top_n=5):
         words = []
         for token, score in token_importance:
             if not token.startswith('##'):
-                word = token.replace('▁', '')  # Handle sentencepiece tokenization
-                if word.strip() and word not in combined_stopwords:
+                word = token.replace('▁', '')  # Handle SentencePiece
+                if word.strip():  # No stopword filtering
                     words.append((word, score))
-        
+
         # Sort by importance and select top N
         words.sort(key=lambda x: x[1], reverse=True)
         explanation_words = [word for word, _ in words[:top_n]]
@@ -256,7 +267,7 @@ def get_explanation_words_transformer(text, tokenizer, model, top_n=5):
         traceback.print_exc()
         # Fallback to simple word extraction
         words = text.split() if isinstance(text, str) else []
-        return list(dict.fromkeys([w for w in words if w not in combined_stopwords]))[:top_n]
+        return list(dict.fromkeys(words))[:top_n]
         
 def generate_code(length=7):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
@@ -881,9 +892,13 @@ def dashboard():
 
         print(f"DEBUG - Raw text: {raw_text}")
         
-        # Tokenize input for transformer model
-        inputs = tokenizer(raw_text, return_tensors="pt", truncation=True, padding=True, max_length=512)
-        inputs = {k: v.to(device) for k, v in inputs.items()}  # Move inputs to device
+        # Preprocess text
+        cleaned_text = preprocess_text(raw_text)
+        print(f"DEBUG - Cleaned text: {cleaned_text}")
+
+        # Tokenize input
+        inputs = tokenizer(cleaned_text, return_tensors="pt", truncation=True, padding=True, max_length=128)
+        inputs = {k: v.to(device) for k, v in inputs.items()}
         print(f"DEBUG - Input IDs shape: {inputs['input_ids'].shape}")
 
         # Get model prediction
@@ -901,7 +916,7 @@ def dashboard():
         label = label_encoder.inverse_transform([pred])[0]
         print(f"DEBUG - Final label: {label}")
         
-        explanation_words = get_explanation_words_transformer(raw_text, tokenizer, model)
+        explanation_words = get_explanation_words_transformer(cleaned_text, tokenizer, model)
 
         db.session.add(AnalysisHistory(
             user_id=current_user.id,
@@ -987,12 +1002,24 @@ def api_analyze():
     raw_text = request.json['text']
     print(f"DEBUG - Raw text: {raw_text}")
 
-    # Tokenize input for transformer model
-    inputs = tokenizer(raw_text, return_tensors="pt", truncation=True, padding=True, max_length=512)
-    inputs = {k: v.to(device) for k, v in inputs.items()}  # Move inputs to device
+    # Preprocess text
+    cleaned_text = preprocess_text(raw_text)
+    print(f"DEBUG - Cleaned text: {cleaned_text}")
+
+        # Tokenize input
+    inputs = tokenizer(cleaned_text, return_tensors="pt", truncation=True, padding=True, max_length=128)
+    inputs = {k: v.to(device) for k, v in inputs.items()}
     print(f"DEBUG - Input IDs shape: {inputs['input_ids'].shape}")
 
-    # Get model prediction
+    if inputs['input_ids'].shape[1] <= 2:
+        return jsonify({
+                'prediction': 'normal',
+                'explanation': [],
+                'status': 'success',
+                'message': 'No analyzable content found'
+        })
+
+        # Get model prediction
     with torch.no_grad():
         outputs = model(**inputs)
         logits = outputs.logits
@@ -1006,7 +1033,8 @@ def api_analyze():
 
     label = label_encoder.inverse_transform([pred])[0]
     print(f"DEBUG - Final label: {label}")
-    explanation_words = get_explanation_words_transformer(raw_text, tokenizer, model)
+
+    explanation_words = get_explanation_words_transformer(cleaned_text, tokenizer, model)
 
     db.session.add(AnalysisHistory(
         user_id=current_user.id,
@@ -1026,26 +1054,27 @@ def api_analyze():
 @app.route('/api/analyze/public', methods=['POST'])
 def api_analyze_public():
     try:
-        # Validate request
         if not request.json or 'text' not in request.json:
             return jsonify({'error': 'Missing text parameter'}), 400
 
         raw_text = request.json['text']
         
-        # Basic validation
         if not raw_text or len(raw_text.strip()) == 0:
             return jsonify({'error': 'Empty text provided'}), 400
         
-        if len(raw_text) > 1000:  # Limit text length
+        if len(raw_text) > 1000:
             return jsonify({'error': 'Text too long (max 1000 characters)'}), 400
 
-        # Tokenize input for transformer model
-        inputs = tokenizer(raw_text, return_tensors="pt", truncation=True, padding=True, max_length=512)
-        inputs = {k: v.to(device) for k, v in inputs.items()}  # Move inputs to device
+        # Preprocess text
+        cleaned_text = preprocess_text(raw_text)
+        print(f"DEBUG - Cleaned text: {cleaned_text}")
+
+        # Tokenize input
+        inputs = tokenizer(cleaned_text, return_tensors="pt", truncation=True, padding=True, max_length=128)
+        inputs = {k: v.to(device) for k, v in inputs.items()}
         print(f"DEBUG - Input IDs shape: {inputs['input_ids'].shape}")
 
-        # Check if input is empty or only stopwords/special tokens
-        if inputs['input_ids'].shape[1] <= 2:  # Only [CLS] and [SEP] tokens
+        if inputs['input_ids'].shape[1] <= 2:
             return jsonify({
                 'prediction': 'normal',
                 'explanation': [],
@@ -1068,9 +1097,8 @@ def api_analyze_public():
         label = label_encoder.inverse_transform([pred])[0]
         print(f"DEBUG - Final label: {label}")
 
-        explanation_words = get_explanation_words_transformer(raw_text, tokenizer, model)
+        explanation_words = get_explanation_words_transformer(cleaned_text, tokenizer, model)
 
-        # Log anonymous usage
         try:
             db.session.add(AnalysisHistory(
                 user_id=None,
@@ -1082,7 +1110,6 @@ def api_analyze_public():
             db.session.commit()
         except Exception as db_error:
             print(f"Database logging error: {db_error}")
-            # Continue without failing the request
 
         response_data = {
             'prediction': label,
@@ -1091,7 +1118,7 @@ def api_analyze_public():
             'debug': {
                 'numeric_prediction': int(pred),
                 'probabilities': proba.tolist(),
-                'cleaned_text': raw_text,  # Use raw_text since preprocessing is handled by tokenizer
+                'cleaned_text': cleaned_text,
                 'confidence': float(max(proba))
             }
         }
@@ -1102,7 +1129,6 @@ def api_analyze_public():
         logging.error(f"Error in public API: {e}")
         import traceback
         traceback.print_exc()
-        
         return jsonify({
             'error': f'Analysis failed: {str(e)}',
             'status': 'error'
@@ -1113,8 +1139,5 @@ def clear_session():
     session.clear()
     return "Session cleared!"
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-        logging.info("Database tables created successfully")
-    port = int(os.getenv("PORT", 5000))  # Use PORT from environment, default to 5000 for local testing
+    port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
