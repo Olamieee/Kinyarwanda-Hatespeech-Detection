@@ -18,3 +18,5 @@ torch
 datasets
 evaluate
 transformers
+huggingface_hub
+huggingface
