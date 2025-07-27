@@ -584,7 +584,49 @@
       color: #9ca3af;
       line-height: 1.7;
     }
+    
+    /* Data Collection Section */
+.data-collection-section {
+  padding: 6rem 0;
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.05) 0%, rgba(78, 205, 196, 0.05) 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
 
+.data-content {
+  max-width: 800px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(15px);
+  padding: 2rem;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.data-content:hover {
+  transform: translateY(-5px);
+  border-color: rgba(78, 205, 196, 0.3);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+}
+
+.data-content p {
+  color: #9ca3af;
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+.privacy-link {
+  color: #4ecdc4;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.privacy-link:hover {
+  color: #ff6b6b;
+  text-decoration: underline;
+}
     /* CTA Section */
     .cta-section {
       text-align: center;
