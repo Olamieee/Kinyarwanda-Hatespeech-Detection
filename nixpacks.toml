@@ -1,8 +1,13 @@
 [phases.setup]
-  cmds = ["pip install --no-cache-dir -r requirements.txt"]
+  nixPkgs = ["python310"]  # Install Python 3.9
+  cmds = [
+    "python -m ensurepip --upgrade",  # Ensure pip is installed
+    "python -m pip install --upgrade pip",  # Upgrade pip
+    "pip install --no-cache-dir -r requirements.txt"  # Install dependencies
+  ]
 
 [phases.build]
-  cmds = []
+  cmds = []  # No additional build steps needed
 
 [start]
-  cmd = "gunicorn app:app --bind 0.0.0.0:$PORT"
+  cmd = "gunicorn app:app --bind 0.0.0.0:$PORT"  # Start Gunicorn in deploy phase
