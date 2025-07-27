@@ -1,13 +1,15 @@
 [phases.setup]
-  nixPkgs = ["python310"]  # Install Python 3.9 (adjust to python310 if needed)
+  nixPkgs = ["python310"]  # Use python310 if needed
   cmds = [
-    "python -m venv /app/venv",  # Create a virtual environment
-    "/app/venv/bin/pip install --upgrade pip",  # Upgrade pip in the virtual environment
-    "/app/venv/bin/pip install --no-cache-dir -r requirements.txt"  # Install dependencies
+    "python -m venv /opt/venv",
+    "/opt/venv/bin/pip install --upgrade pip",
+    "/opt/venv/bin/pip install --no-cache-dir -r requirements.txt",
+    "/opt/venv/bin/pip install huggingface_hub",  # Install huggingface_hub for model download
+    "/opt/venv/bin/huggingface-cli download lapppy1/kinyaAI --local-dir /app/model --cache-dir /app/.cache/huggingface"  # Cache model
   ]
 
 [phases.build]
-  cmds = []  # No additional build steps needed
+  cmds = []
 
 [start]
-  cmd = "/app/venv/bin/gunicorn app:app --bind 0.0.0.0:$PORT"  # Use Gunicorn from the virtual environment
+  cmd = "/opt/venv/bin/gunicorn app:app --bind 0.0.0.0:$PORT"

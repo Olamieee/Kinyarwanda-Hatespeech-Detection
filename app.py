@@ -148,25 +148,16 @@ def validate_password(password):
     
     return True, ""
 
-model_path = "lapppy1/kinyaAI"
-label_encoder_path = "https://huggingface.co/lapppy1/kinyaAI/resolve/main/label_encoder.pkl"  # ✅ use 'resolve'
-
-# Load model and tokenizer
+model_path = "/app/model"  # Use cached model directory
 try:
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model = AutoModelForSequenceClassification.from_pretrained(model_path)
-    response = requests.get(label_encoder_path)
-    if response.status_code == 200:
-        label_encoder = joblib.load(BytesIO(response.content))
-        logging.info("Label encoder loaded successfully")
-    else:
-        raise Exception(f"Failed to load label_encoder.pkl. Status code: {response.status_code}, Response: {response.text}")
-
+    label_encoder = joblib.load("/app/model/label_encoder.pkl")
+    logging.info("Label encoder loaded successfully")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     model.eval()
-    logging.info("Model, tokenizer, and label encoder loaded successfully from Hugging Face")
-
+    logging.info("Model, tokenizer, and label encoder loaded successfully from cached directory")
 except Exception as e:
     logging.error(f"Failed to load model, tokenizer, or label encoder: {e}")
     raise
