@@ -1,11 +1,12 @@
 [phases.setup]
-  nixPkgs = ["python310"]  # Use python310 if needed
+  nixPkgs = ["python310"]
   cmds = [
     "python -m venv /opt/venv",
     "/opt/venv/bin/pip install --upgrade pip",
     "/opt/venv/bin/pip install --no-cache-dir -r requirements.txt",
-    "/opt/venv/bin/pip install huggingface_hub",  # Install huggingface_hub for model download
-    "/opt/venv/bin/huggingface-cli download lapppy1/kinyaAI --local-dir /app/model --cache-dir /app/.cache/huggingface"  # Cache model
+    "/opt/venv/bin/pip install huggingface_hub",
+    "/opt/venv/bin/huggingface-cli download lapppy1/kinyaAI config.json model.safetensors tokenizer.json tokenizer_config.json --local-dir /app/model --cache-dir /app/.cache/huggingface",
+    "/opt/venv/bin/huggingface-cli download lapppy1/kinyaAI label_encoder.pkl --local-dir /app/model --cache-dir /app/.cache/huggingface"
   ]
 
 [phases.build]
