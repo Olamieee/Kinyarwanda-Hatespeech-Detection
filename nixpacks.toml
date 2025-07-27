@@ -1,13 +1,13 @@
 [phases.setup]
-  nixPkgs = ["python310"]  # Install Python 3.9
+  nixPkgs = ["python310"]  # Install Python 3.9 (adjust to python310 if needed)
   cmds = [
-    "python -m ensurepip --upgrade",  # Ensure pip is installed
-    "python -m pip install --upgrade pip",  # Upgrade pip
-    "pip install --no-cache-dir -r requirements.txt"  # Install dependencies
+    "python -m venv /app/venv",  # Create a virtual environment
+    "/app/venv/bin/pip install --upgrade pip",  # Upgrade pip in the virtual environment
+    "/app/venv/bin/pip install --no-cache-dir -r requirements.txt"  # Install dependencies
   ]
 
 [phases.build]
   cmds = []  # No additional build steps needed
 
 [start]
-  cmd = "gunicorn app:app --bind 0.0.0.0:$PORT"  # Start Gunicorn in deploy phase
+  cmd = "/app/venv/bin/gunicorn app:app --bind 0.0.0.0:$PORT"  # Use Gunicorn from the virtual environment
