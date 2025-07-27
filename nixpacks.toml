@@ -1,16 +1,20 @@
 [phases.setup]
-  nixPkgs = ["python310"]
+  nixPkgs = ["python310"]  # Use python310 if your dependencies require it
   cmds = [
-    "python -m venv /opt/venv",
+    "python -m venv /opt/venv",  # Create virtual environment once
     "/opt/venv/bin/pip install --upgrade pip",
     "/opt/venv/bin/pip install --no-cache-dir -r requirements.txt",
     "/opt/venv/bin/pip install huggingface_hub",
-    "/opt/venv/bin/huggingface-cli download lapppy1/kinyaAI config.json model.safetensors tokenizer.json tokenizer_config.json --local-dir /app/model --cache-dir /app/.cache/huggingface",
-    "/opt/venv/bin/huggingface-cli download lapppy1/kinyaAI label_encoder.pkl --local-dir /app/model --cache-dir /app/.cache/huggingface"
+    "/opt/venv/bin/hf download lapppy1/kinyaAI config.json model.safetensors tokenizer.json tokenizer_config.json --local-dir /app/model --cache-dir /app/.cache/huggingface",
+    "/opt/venv/bin/hf download lapppy1/kinyaAI label_encoder.pkl --local-dir /app/model --cache-dir /app/.cache/huggingface"
   ]
 
 [phases.build]
-  cmds = []
+  cmds = []  # No build steps to avoid conflicts
 
 [start]
   cmd = "/opt/venv/bin/gunicorn app:app --bind 0.0.0.0:$PORT"
+
+# Prevent Railway from adding default Python setup steps
+[phases.install]
+  cmds = []
