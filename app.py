@@ -55,8 +55,9 @@ CORS(app,
                  "moz-extension://*", 
                  "http://localhost:*",
                  "http://127.0.0.1:*",
-                 "https://kinyarwanda-hatespeech-detection.onrender.com"
-             ],
+                 "https://kinyarwanda-hatespeech-detection.onrender.com",
+                 "https://web-production-6df1a.up.railway.app"
+                 ],
              "methods": ["GET", "POST", "OPTIONS"],
              "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
              "expose_headers": ["Set-Cookie"],
@@ -88,6 +89,8 @@ def get_base_url():
     """Get base URL based on environment"""
     if os.getenv('RENDER'):
         return f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}"
+    elif os.getenv('RAILWAY_ENVIRONMENT'):
+        return f"https://{os.getenv('RAILWAY_DOMAIN', 'your-app.railway.app')}"
     return os.getenv('BASE_URL', 'http://127.0.0.1:5000') # for local development
 
 BASE_URL = get_base_url()
@@ -1056,5 +1059,5 @@ def clear_session():
     session.clear()
     return "Session cleared!"
 
-if __name__ == "__main__":
+if __name__ == "__main__" and not (os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RENDER")):
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
