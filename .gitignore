@@ -4,3 +4,4 @@ model/hate_speech_model.ipynb
 model/model2.ipynbmodl/lr_model.pkl
 model/tfidf.pkl
 model/model2.ipynb
+model.safetensors

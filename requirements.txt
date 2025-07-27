@@ -8,15 +8,15 @@ joblib
 numpy
 sqlalchemy
 dotenv
-scikit-learn
+# scikit-learn (model training)
 Flask-Dance
 flask-limiter
 flask_cors
 flask_session
 authlib
 torch
-datasets
-evaluate
+# datasets (model training)
+# evaluate (model training)
 transformers
 huggingface_hub
-huggingface
+# huggingface
