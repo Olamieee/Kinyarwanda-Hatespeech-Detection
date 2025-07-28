@@ -146,40 +146,30 @@ def validate_password(password):
     return True, ""
 
 # Model path configuration
-model_path = "model/kinyarwanda-hatespeech-model"  # Use local model directory
-model_id = "lapppy1/kinyaAI"
-label_encoder_path = f"{model_path}/label_encoder.pkl"
+model_path = os.getenv("MODEL_PATH", "./models/kinyaAI" if os.getenv("LOCAL_DEV", "false").lower() == "true" else "lapppy1/kinyaAI")
 
 try:
-    # Check if model files exist locally
-    if Path(model_path).exists() and Path(label_encoder_path).exists():
-        tokenizer = AutoTokenizer.from_pretrained(model_path)
-        model = AutoModelForSequenceClassification.from_pretrained(model_path)
-        label_encoder = joblib.load(label_encoder_path)
-        logging.info("Model, tokenizer, and label encoder loaded from local directory")
+    logging.info(f"Loading tokenizer from {model_path}")
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_path,
+        token=os.getenv("HUGGINGFACE_TOKEN") if os.getenv("HUGGINGFACE_TOKEN") else None
+    )
+    logging.info("Tokenizer loaded successfully")
+    model = AutoModelForSequenceClassification.from_pretrained(
+        model_path,
+        token=os.getenv("HUGGINGFACE_TOKEN") if os.getenv("HUGGINGFACE_TOKEN") else None
+    )
+    logging.info("Model loaded successfully")
+    # Load label encoder if used
+    label_encoder_path = os.getenv("LABEL_ENCODER_PATH", "./models/label_encoder.pkl")
+    if os.path.exists(label_encoder_path):
+        with open(label_encoder_path, 'rb') as f:
+            label_encoder = pickle.load(f)
+        logging.info("Label encoder loaded successfully")
     else:
-        # Download from Hugging Face
-        tokenizer = AutoTokenizer.from_pretrained(model_id, token=os.getenv('HUGGINGFACE_TOKEN'))
-        model = AutoModelForSequenceClassification.from_pretrained(model_id, token=os.getenv('HUGGINGFACE_TOKEN'))
-        response = requests.get("https://huggingface.co/lapppy1/kinyaAI/resolve/main/label_encoder.pkl", headers={"Authorization": f"Bearer {os.getenv('HUGGINGFACE_TOKEN')}"})
-        if response.status_code == 200:
-            label_encoder = joblib.load(BytesIO(response.content))
-            # Save to local directory for future runs
-            os.makedirs(model_path, exist_ok=True)
-            tokenizer.save_pretrained(model_path)
-            model.save_pretrained(model_path)
-            joblib.dump(label_encoder, label_encoder_path)
-            logging.info("Model, tokenizer, and label encoder downloaded from Hugging Face and saved locally")
-        else:
-            raise Exception(f"Failed to download label_encoder.pkl: Status {response.status_code}")
-
-    # Set up model for inference
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
-    model.eval()
-    logging.info("Model, tokenizer, and label encoder loaded successfully")
+        logging.warning(f"Label encoder not found at {label_encoder_path}")
 except Exception as e:
-    logging.error(f"Failed to load model, tokenizer, or label encoder: {e}")
+    logging.error(f"Failed to load model, tokenizer, or label encoder: {str(e)}")
     raise
 
 # Models Classes
