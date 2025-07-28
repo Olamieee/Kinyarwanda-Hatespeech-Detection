@@ -2,9 +2,8 @@ from flask import Flask, render_template, request, redirect, url_for, flash, abo
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_mail import Message, Mail
 from datetime import datetime, timedelta
-import re, random, string, time, secrets, requests, pickle
+import re, random, string, time, secrets, requests
 from sqlalchemy import func
 import logging
 from dotenv import load_dotenv
@@ -20,6 +19,8 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 from io import BytesIO
 from pathlib import Path
+import joblib  # Replaced pickle with joblib
+from huggingface_hub import hf_hub_download
 
 load_dotenv()
 
@@ -146,7 +147,7 @@ def validate_password(password):
     return True, ""
 
 # Model path configuration
-model_path = os.getenv("MODEL_PATH", "./models/kinyaAI" if os.getenv("LOCAL_DEV", "false").lower() == "true" else "lapppy1/kinyaAI")
+model_path = os.getenv("MODEL_PATH", "./model/kinyarwanda-hatespeech-model" if os.getenv("LOCAL_DEV", "false").lower() == "true" else "lapppy1/kinyaAI")
 
 try:
     logging.info(f"Loading tokenizer from {model_path}")
@@ -160,17 +161,29 @@ try:
         token=os.getenv("HUGGINGFACE_TOKEN") if os.getenv("HUGGINGFACE_TOKEN") else None
     )
     logging.info("Model loaded successfully")
-    # Load label encoder if used
-    label_encoder_path = os.getenv("LABEL_ENCODER_PATH", "./model/kinyarwanda-hatespeech-model/label_encoder.pkl")
+    # Load label encoder
+    if os.getenv("LOCAL_DEV", "false").lower() == "true":
+        label_encoder_path = os.getenv("LABEL_ENCODER_PATH", "./model/kinyarwanda-hatespeech-model/label_encoder.pkl")
+    else:
+        label_encoder_path = hf_hub_download(
+            repo_id="lapppy1/kinyaAI",
+            filename="label_encoder.pkl",
+            token=os.getenv("HUGGINGFACE_TOKEN") if os.getenv("HUGGINGFACE_TOKEN") else None
+        )
     if os.path.exists(label_encoder_path):
         with open(label_encoder_path, 'rb') as f:
-            label_encoder = pickle.load(f)
+            label_encoder = joblib.load(f)
         logging.info("Label encoder loaded successfully")
     else:
-        logging.warning(f"Label encoder not found at {label_encoder_path}")
+        logging.error(f"Label encoder not found at {label_encoder_path}")
+        raise FileNotFoundError(f"Label encoder not found at {label_encoder_path}")
 except Exception as e:
     logging.error(f"Failed to load model, tokenizer, or label encoder: {str(e)}")
     raise
+
+# Device setup
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
 
 # Models Classes
 class User(UserMixin, db.Model):
@@ -298,7 +311,7 @@ If you didn't request this, please ignore this email.
 """
     return send_email_with_sendgrid(email, subject, html_content, text_content)
 
-# Google OAuth Helper Functionsh
+# Google OAuth Helper Functions
 def get_google_auth_url():
     """Generate Google OAuth authorization URL"""
     if not GOOGLE_AUTH_ENABLED:
