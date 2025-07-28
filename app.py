@@ -4,7 +4,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Message, Mail
 from datetime import datetime, timedelta
-import re, random, string, time, secrets, requests, joblib
+import re, random, string, time, secrets, requests, pickle
 from sqlalchemy import func
 import logging
 from dotenv import load_dotenv
@@ -161,7 +161,7 @@ try:
     )
     logging.info("Model loaded successfully")
     # Load label encoder if used
-    label_encoder_path = os.getenv("LABEL_ENCODER_PATH", "./models/label_encoder.pkl")
+    label_encoder_path = os.getenv("LABEL_ENCODER_PATH", "./modelkinyarwanda-hatespeech-model/label_encoder.pkl")
     if os.path.exists(label_encoder_path):
         with open(label_encoder_path, 'rb') as f:
             label_encoder = pickle.load(f)
