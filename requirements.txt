@@ -8,7 +8,7 @@ joblib
 numpy
 sqlalchemy
 dotenv
-# scikit-learn (model training)
+scikit-learn #(model training)
 Flask-Dance
 flask-limiter
 flask_cors
