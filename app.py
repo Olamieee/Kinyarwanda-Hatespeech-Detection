@@ -161,7 +161,7 @@ try:
     )
     logging.info("Model loaded successfully")
     # Load label encoder if used
-    label_encoder_path = os.getenv("LABEL_ENCODER_PATH", "./modelkinyarwanda-hatespeech-model/label_encoder.pkl")
+    label_encoder_path = os.getenv("LABEL_ENCODER_PATH", "./model/kinyarwanda-hatespeech-model/label_encoder.pkl")
     if os.path.exists(label_encoder_path):
         with open(label_encoder_path, 'rb') as f:
             label_encoder = pickle.load(f)
