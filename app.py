@@ -85,14 +85,10 @@ if not GOOGLE_AUTH_ENABLED:
 else:
     logging.info("Google OAuth credentials loaded successfully.")
 
-# Base URL function
 def get_base_url():
-    """Get base URL based on environment"""
-    if os.getenv('RENDER'):
-        return f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}"
-    elif os.getenv('RAILWAY_ENVIRONMENT'):
-        return f"https://{os.getenv('RAILWAY_DOMAIN', 'your-app.railway.app')}"
-    return os.getenv('BASE_URL', 'http://127.0.0.1:5000') # for local development
+    if os.getenv("LOCAL_DEV", "false").lower() == "true":
+        return f"http://127.0.0.1:{os.environ.get('PORT', '5000')}"
+    return f"https://{os.getenv('RAILWAY_DOMAIN', 'web-production-6df1a.up.railway.app')}"
 
 BASE_URL = get_base_url()
 logging.info(f"Using base URL: {BASE_URL}")
@@ -149,25 +145,10 @@ def validate_password(password):
     
     return True, ""
 
-# model_path = "/app/model"  # Use cached model directory
-# try:
-#     tokenizer = AutoTokenizer.from_pretrained(model_path)
-#     model = AutoModelForSequenceClassification.from_pretrained(model_path)
-#     label_encoder = joblib.load("/app/model/label_encoder.pkl")
-#     logging.info("Label encoder loaded successfully")
-#     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#     model.to(device)
-#     model.eval()
-#     logging.info("Model, tokenizer, and label encoder loaded successfully from cached directory")
-# except Exception as e:
-#     logging.error(f"Failed to load model, tokenizer, or label encoder: {e}")
-#     raise
-
-
-# Determine model path based on environment
-model_path = "/app/model" if os.getenv("RAILWAY_ENVIRONMENT") else "./"
+# Model path configuration
+model_path = "model/kinyarwanda-hatespeech-model"  # Use local model directory
 model_id = "lapppy1/kinyaAI"
-label_encoder_path = f"{model_path}/model/kinyrwanda-hatespeech-model/label_encoder.pkl"
+label_encoder_path = f"{model_path}/label_encoder.pkl"
 
 try:
     # Check if model files exist locally
@@ -177,13 +158,18 @@ try:
         label_encoder = joblib.load(label_encoder_path)
         logging.info("Model, tokenizer, and label encoder loaded from local directory")
     else:
-        # Fall back to downloading from Hugging Face
-        tokenizer = AutoTokenizer.from_pretrained(model_id)
-        model = AutoModelForSequenceClassification.from_pretrained(model_id)
-        response = requests.get("https://huggingface.co/lapppy1/kinyaAI/resolve/main/label_encoder.pkl")
+        # Download from Hugging Face
+        tokenizer = AutoTokenizer.from_pretrained(model_id, token=os.getenv('HUGGINGFACE_TOKEN'))
+        model = AutoModelForSequenceClassification.from_pretrained(model_id, token=os.getenv('HUGGINGFACE_TOKEN'))
+        response = requests.get("https://huggingface.co/lapppy1/kinyaAI/resolve/main/label_encoder.pkl", headers={"Authorization": f"Bearer {os.getenv('HUGGINGFACE_TOKEN')}"})
         if response.status_code == 200:
             label_encoder = joblib.load(BytesIO(response.content))
-            logging.info("Model, tokenizer, and label encoder downloaded from Hugging Face")
+            # Save to local directory for future runs
+            os.makedirs(model_path, exist_ok=True)
+            tokenizer.save_pretrained(model_path)
+            model.save_pretrained(model_path)
+            joblib.dump(label_encoder, label_encoder_path)
+            logging.info("Model, tokenizer, and label encoder downloaded from Hugging Face and saved locally")
         else:
             raise Exception(f"Failed to download label_encoder.pkl: Status {response.status_code}")
 
@@ -322,7 +308,7 @@ If you didn't request this, please ignore this email.
 """
     return send_email_with_sendgrid(email, subject, html_content, text_content)
 
-# Google OAuth Helper Functions
+# Google OAuth Helper Functionsh
 def get_google_auth_url():
     """Generate Google OAuth authorization URL"""
     if not GOOGLE_AUTH_ENABLED:
@@ -1058,6 +1044,10 @@ def api_analyze_public():
             'status': 'error'
         }), 500
 
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
+
 @app.route('/test')
 def test_predictions():
     test_texts = ["Umwana na se", "Abatutsi baracyariho"]
@@ -1083,5 +1073,10 @@ def clear_session():
     session.clear()
     return "Session cleared!"
 
-if __name__ == "__main__" and not (os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RENDER")):
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    logging.info(f"Starting server on port {port}")
+    if os.getenv("LOCAL_DEV", "false").lower() == "true":
+        app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
+    else:
+        logging.info("Running in production mode; use Gunicorn or similar.")

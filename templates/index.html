@@ -236,7 +236,7 @@
         Join thousands of content creators, community managers, and platform owners who've revolutionized their digital environments. Experience the future of culturally-aware content moderation.
       </p>
       <div class="hero-buttons">
-        <a href="#" class="btn btn-primary">Get Started</a>
+        <a href="{{ url_for('register') }}" class="btn btn-primary">Get Started</a>
         <!-- <a href="#examples" class="btn btn-secondary">Explore More Examples</a> -->
       </div>
     </div>
@@ -251,9 +251,9 @@
           ensure safer digital spaces. This data is securely handled with end-to-end encryption 
           and automatically purged after analysis, in line with our zero-knowledge architecture. 
           We do not store personal information beyond what is necessary for the service, and we 
-          <!-- never share your data with third parties without explicit consent. For more details, 
+          never share your data with third parties without explicit consent. For more details, 
           please review our 
-          <a href="/privacy-policy" class="privacy-link">Privacy Policy</a>. -->
+          <a href="{{ url_for('privacy') }}" class="privacy-link">Privacy Policy</a>.
         </p>
       </div>
     </div>
@@ -262,7 +262,7 @@
   <footer>
     <div style="max-width: 800px; margin: 0 auto;">
       <p><strong>KinyaAI</strong> - Building bridges through intelligent moderation</p>
-      <p>© 2025 All rights reserved | Contact: hello@kinyaai.com</p>
+      <p>© 2025 All rights reserved | Contact: <a href="mailto:p.umutoniwa@alustudent.com" class="privacy-link">p.umutoniwa@alustudent.com</a></p>
     </div>
   </footer>
 
