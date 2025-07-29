@@ -1,243 +1,257 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KinyaAI - Privacy Policy</title>
-  <link rel="stylesheet" href="../static/css/privacy.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KinyaAI - Privacy Policy</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='privacy.css') }}">
 </head>
 <body>
-  <div class="bg-animation"></div>
+    <div class="bg-animation"></div>
 
-  
-  <nav>
-    <div class="nav-container">
-      <a href="index.html" class="logo">KinyaAI</a>
-      <!-- <div class="nav-links">
-        <a href="index.html#features">Features</a>
-        <a href="index.html#examples">Examples</a>
-        <a href="index.html#how-it-works">How It Works</a>
-        <a href="index.html#stats">Stats</a>
-      </div> -->
-      <!-- <div class="menu-toggle">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div> -->
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="{{ url_for('index') }}" class="logo">KinyaAI</a>
+            <div class="nav-links">
+                <a href="{{ url_for('index') }}">Home</a>
+                <a href="{{ url_for('register') }}">Dive In</a>
+                <a href="{{ url_for('privacy') }}">Privacy</a>
+                <a href="mailto:p.umutoniwa@alustudent.com">Contact</a>
+            </div>
+            <div class="menu-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="privacy-hero">
+        <div class="hero-particles">
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+        </div>
+        <div class="container">
+            <div class="hero-content">
+                <h1>KinyaAI - Privacy Policy</h1>
+                <p class="hero-subtitle">Kinyarwanda Hate Speech Detection using Machine Learning</p>
+                <p class="hero-description">This Privacy Policy is available in both English and Kinyarwanda. Each version includes its own Table of Contents for easier navigation.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Content Section -->
+    <section class="privacy-content">
+        <div class="container">
+            <!-- Kinyarwanda Version -->
+            <div class="content-box">
+                <h2>MU KINYARWANDA</h2>
+                <p><strong>Itariki itangiye kubahirizwa:</strong> 13 Nyakanga 2025<br>
+                <strong>Yavuguruwe bwa nyuma:</strong> 25 Nyakanga 2025</p>
+                <p>Murakaza neza kuri KinyaAI, urubuga rwakozwe kugira ngo rufashe mu kumenya amagambo y’urwango mu Kinyarwanda no guteza imbere umutekano mu itumanaho ryo kuri murandasi mu Rwanda. Iyi politiki igaragaza uko dukusanya, dukoresha, kandi turinda amakuru utanga igihe ukoresha serivisi zacu.</p>
+                
+                <h3 class="toc">Table of Contents</h3>
+                <ol>
+                    <li><a href="#amakuru-dukusanya" class="privacy-link">Amakuru Dukusanya</a></li>
+                    <li><a href="#uko-dukoresha" class="privacy-link">Uko Dukoresha Amakuru Watanze</a></li>
+                    <li><a href="#nta-kubika" class="privacy-link">Nta Kubika Amakuru, Nta Kuyasangiza Inyuma</a></li>
+                    <li><a href="#imikorere-extension" class="privacy-link">Imikorere ya Extension</a></li>
+                    <li><a href="#ishingiro-amategeko" class="privacy-link">Ishingiro ry’Amategeko n’Uko Tubahiriza Itegeko</a></li>
+                    <li><a href="#umutekano-amakuru" class="privacy-link">Umutekano w’Amakuru</a></li>
+                    <li><a href="#uburenganzira" class="privacy-link">Uburenganzira bwawe nk’Umukoresha</a></li>
+                    <li><a href="#aho-wadusanga" class="privacy-link">Aho Wadusanga</a></li>
+                </ol>
+
+                <h3 id="amakuru-dukusanya">1. Amakuru Dukusanya</h3>
+                <p>Iyo ukoresha KinyaAI (ku rubuga cyangwa extension ya Chrome), twakira gusa amagambo wohereje ubwawe kugira ngo asuzumwe. Ibi bivuze amagambo:</p>
+                <ul>
+                    <li>Wandikiye mu rubuga</li>
+                    <li>Wahisemo (highlight) ku urubuga runaka maze ukemeza ko ushatse kuyasuzuma</li>
+                </ul>
+                <p>Nta bindi dukusanya nka:</p>
+                <ul>
+                    <li>Amateka y’ibyo wasuye kuri murandasi</li>
+                    <li>Indangamuntu cyangwa amazina yawe</li>
+                    <li>Amakuru atagaragajwe n’umukoresha ubwe</li>
+                </ul>
+
+                <h3 id="uko-dukoresha">2. Uko Dukoresha Amakuru Watanze</h3>
+                <p>Amagambo wohereje akoreshwa gusa mu kuyasuzuma hakoreshejwe ubwenge bw’ubukorano (machine learning) bugamije kureba niba arimo urwango cyangwa amagambo ashobora kubangamira abandi.</p>
+                <p>Ibi bikorwa bikorwa mu buryo bwa zero-knowledge architecture, aho:</p>
+                <ul>
+                    <li>Amagambo wohereje yoherezwa mu buryo bwizewe hakoreshejwe HTTPS</li>
+                    <li>Asuzumwa ako kanya mu bubiko bw’igihe gito (memory)</li>
+                    <li>Igihe ibisubizo bimaze gutangwa, ayo magambo ahita asibwa ako kanya.</li>
+                </ul>
+
+                <h3 id="nta-kubika">3. Nta Kubika Amakuru, Nta Kuyasangiza Inyuma</h3>
+                <p>Nta makuru bwite abikwa atari ayo ukeneye gusa ngo konti yawe ikore (nko email n’ijambo ry’ibanga igihe wiyandikishije). Nta na rimwe dusangira cyangwa tugurisha amakuru yawe ku bandi bantu cyangwa ibigo byo hanze.</p>
+                <p>Niba ukoresha konti, amateka y’icyo wasabye gusesengurwa abikwa kuri wowe gusa, kandi ushobora kuyasibanganya igihe icyo ari cyo cyose ukoresheje Dashboard yawe.</p>
+
+                <h3 id="imikorere-extension">4. Imikorere ya Extension</h3>
+                <p>Extension ya KinyaAI kuri Chrome ikora gusa iyo:</p>
+                <ul>
+                    <li>Wahisemo amagambo (highlight)</li>
+                    <li>Wemeje gusuzuma ukoresheje buto yabigenewe</li>
+                </ul>
+                <p>Ntishobora gusesengura urupapuro rwose cyangwa gukurikirana ibikorwa byawe mu buryo bwikora. Iyi mikorere yubahiriza Amabwiriza ya Chrome Web Store.</p>
+
+                <h3 id="ishingiro-amategeko">5. Ishingiro ry’Amategeko n’Uko Tubahiriza Itegeko</h3>
+                <p>KinyaAI yubahiriza:</p>
+                <ul>
+                    <li>Itegeko No. 058/2021 rigenga uburinzi bw’amakuru bwite mu Rwanda</li>
+                    <li>Itegeko rya GDPR, Ingingo ya 2(2)(c), ryemerera gusesengura amakuru yoherejwe n’umukoresha ubwe, adakeneweho uruhushya rwihariye</li>
+                    <li>IEEE Ethically Aligned Design na W3C Ethical Web Principles byibanda ku bwisanzure bw’umukoresha n’icyubahiro cye</li>
+                </ul>
+
+                <h3 id="umutekano-amakuru">6. Umutekano w’Amakuru</h3>
+                <p>Itumanaho riri hagati y’urubuga cyangwa extension na server yacu rikoreshwa mu buryo bwizewe, hakoreshejwe uburinzi bwa HTTPS. Nta tracking, cookies, cyangwa ibikoresho by’ubusesenguzi (analytics tools) dukoresha.</p>
+                <p>Konti z’abakoresha zirinzwe hakoreshejwe uburyo buhamye bwo kubika amagambo y’ibanga no kwinjira mu buryo butekanye.</p>
+
+                <h3 id="uburenganzira">7. Uburenganzira bwawe nk’Umukoresha</h3>
+                <p>Wemerewe:</p>
+                <ul>
+                    <li>Kugenzura amakuru dufite akwerekeyeho</li>
+                    <li>Gusaba ko konti yawe cyangwa amakuru ayibitseho asibanganywa</li>
+                    <li>Gusubika uruhushya rwo gukoresha amakuru yawe cyangwa gusaba ibisobanuro birambuye</li>
+                </ul>
+                <p>Ushobora kwandikira itsinda ryacu ry’uburinzi bw’amakuru igihe cyose ukoresheje aderesi yanditse hepfo.</p>
+
+                <h3 id="aho-wadusanga">8. Aho Wadusanga</h3>
+                <p>Niba ufite ikibazo cyangwa ushaka ibisobanuro ku bijyanye n’iyi byavugiwe hejuru, twandikire kuri:</p>
+                <p>📧 <a href="mailto:p.umutoniwa@alustudent.com" class="privacy-link">p.umutoniwa@alustudent.com</a><br>
+                📍 Kigali, Rwanda</p>
+            </div>
+
+            <!-- English Version -->
+            <div class="content-box">
+                <h2>ENGLISH VERSION</h2>
+                <p><strong>Effective Date:</strong> July 13, 2025<br>
+                <strong>Last Updated:</strong> July 25, 2025</p>
+                <p>Welcome to KinyaAI, a platform designed to detect hate speech in Kinyarwanda text and contribute to safer digital communities in Rwanda. This Privacy Policy explains how we collect, process, and protect the data you provide when using our services.</p>
+                
+                <h3 class="toc">Table of Contents</h3>
+                <ol>
+                    <li><a href="#what-we-collect" class="privacy-link">What We Collect</a></li>
+                    <li><a href="#how-we-use" class="privacy-link">How We Use Your Data</a></li>
+                    <li><a href="#no-storage" class="privacy-link">No Storage, No Sharing</a></li>
+                    <li><a href="#extension-behavior" class="privacy-link">Extension Permissions and Behavior</a></li>
+                    <li><a href="#legal-basis" class="privacy-link">Legal Basis & Compliance</a></li>
+                    <li><a href="#security-practices" class="privacy-link">Security Practices</a></li>
+                    <li><a href="#your-rights" class="privacy-link">Your Rights</a></li>
+                    <li><a href="#contact-info" class="privacy-link">Contact Information</a></li>
+                </ol>
+
+                <h3 id="what-we-collect">1. What We Collect</h3>
+                <p>When you use KinyaAI (website or browser extension), we collect only the text you explicitly input or highlight for analysis. This includes:</p>
+                <ul>
+                    <li>Text you type into the input field on our site</li>
+                    <li>Text you highlight via the browser extension and choose to analyze</li>
+                </ul>
+                <p>We do not collect:</p>
+                <ul>
+                    <li>Your browsing history</li>
+                    <li>Your personal identity</li>
+                    <li>Any hidden or background data from other sites</li>
+                </ul>
+
+                <h3 id="how-we-use">2. How We Use Your Data</h3>
+                <p>Your input is processed solely to detect potential hate speech using a machine learning model. The classification helps users understand whether the text may be harmful or offensive.</p>
+                <p>All processing is performed under a zero-knowledge architecture:</p>
+                <ul>
+                    <li>Input text is sent securely to our backend via HTTPS.</li>
+                    <li>It is processed instantly in memory.</li>
+                </ul>
+
+                <h3 id="no-storage">3. No Storage, No Sharing</h3>
+                <p>We do not store personal information beyond what is necessary for basic account functionality (e.g., email and password if you sign up). We never sell or share user data with third parties, advertisers, or external platforms.</p>
+                <p>Your classification history (if saved at all) is only visible to you and can be deleted at any time via your user dashboard.</p>
+
+                <h3 id="extension-behavior">4. Extension Permissions and Behavior</h3>
+                <p>The KinyaAI Chrome Extension only activates when:</p>
+                <ul>
+                    <li>You manually highlight text</li>
+                    <li>You click the "Analyze with KinyaAI" button</li>
+                </ul>
+                <p>It does not scan entire pages, run in the background, or access other page content without your explicit action. This behavior complies with the Chrome Web Store Developer Program Policies.</p>
+
+                <h3 id="legal-basis">5. Legal Basis & Compliance</h3>
+                <p>KinyaAI complies with:</p>
+                <ul>
+                    <li>Rwanda’s Law No. 058/2021 on the Protection of Personal Data and Privacy</li>
+                    <li>General Data Protection Regulation (GDPR), Article 2(2)(c), which exempts purely local, user-triggered data processing from consent obligations</li>
+                    <li>IEEE Ethically Aligned Design and W3C Ethical Web Principles, prioritizing user agency, consent, and privacy</li>
+                </ul>
+
+                <h3 id="security-practices">6. Security Practices</h3>
+                <p>All communication between your browser and our backend is encrypted using industry-standard HTTPS. No third-party trackers, cookies, or analytics tools are used.</p>
+                <p>User accounts (if applicable) are protected with hashed passwords and secure login protocols.</p>
+
+                <h3 id="your-rights">7. Your Rights</h3>
+                <p>As a user, you have the right to:</p>
+                <ul>
+                    <li>Access and review any data we store about your account</li>
+                    <li>Delete your account or any stored classification history</li>
+                    <li>Revoke consent or request more information at any time</li>
+                </ul>
+                <p>To exercise these rights, please contact us via the support email listed below.</p>
+
+                <h3 id="contact-info">8. Contact Information</h3>
+                <p>If you have questions about this Privacy Policy or your data rights, you can contact us at:</p>
+                <p>📧 <a href="mailto:p.umutoniwa@alustudent.com" class="privacy-link">p.umutoniwa@alustudent.com</a><br>
+                📍 Kigali, Rwanda</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <h2>Ready to Experience Secure Moderation?</h2>
+            <p>Join thousands of users who trust KinyaAI for culturally-aware, privacy-first content moderation.</p>
+            <a href="{{ url_for('index') }}" class="btn btn-primary">Get Started</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>KinyaAI - Building bridges through intelligent moderation</p>
+            <p>© 2025 All rights reserved | Contact: <a href="mailto:p.umutoniwa@alustudent.com" class="privacy-link">p.umutoniwa@alustudent.com</a></p>
+        </div>
+    </footer>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu">
+        <a href="{{ url_for('index') }}">Home</a>
+      <a href="{{ url_for('register') }}">Dive In</a>
+        <a href="{{ url_for('privacy') }}">Privacy</a>
+        <a href="mailto:p.umutoniwa@alustudent.com">Contact</a>
     </div>
-    <!-- <div class="mobile-menu">
-      <a href="index.html#features">Features</a>
-      <a href="index.html#examples">Examples</a>
-      <a href="index.html#how-it-works">How It Works</a>
-      <a href="index.html#stats">Stats</a>
-    </div> -->
-  </nav>
 
-  <section class="privacy-hero">
-    <div class="hero-particles">
-      <div class="particle"></div>
-      <div class="particle"></div>
-      <div class="particle"></div>
-      <div class="particle"></div>
-      <div class="particle"></div>
-      <div class="particle"></div>
-      <div class="particle"></div>
-      <div class="particle"></div>
-      <div class="particle"></div>
-    </div>
-    <div class="hero-content container">
-      <h1>KinyaAI - Privacy Policy</h1>
-      <p class="hero-subtitle">Kinyarwanda Hate Speech Detection using Machine Learning</p>
-      <p class="hero-description">This Privacy Policy is available in both English and Kinyarwanda. Each version includes its own Table of Contents for easier navigation.</p>
-    </div>
-  </section>
+    <!-- Scroll Animation Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const elements = document.querySelectorAll('.fade-in');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, { threshold: 0.1 });
 
-  <section class="privacy-content container fade-in">
-    <div class="content-box">
-      <h2>MU KINYARWANDA</h2>
-      <p><strong>Itariki itangiye kubahirizwa:</strong> 13 Nyakanga 2025<br><strong>Yavuguruwe bwa nyuma:</strong> 25 Nyakanga 2025</p>
-      <p>Murakaza neza kuri KinyaAI, urubuga rwakozwe kugira ngo rufashe mu kumenya amagambo y’urwango mu Kinyarwanda no guteza imbere umutekano mu itumanaho ryo kuri murandasi mu Rwanda. Iyi politiki igaragaza uko dukusanya, dukoresha, kandi turinda amakuru utanga igihe ukoresha serivisi zacu.</p>
-      
-      <h3>Table of Contents</h3>
-      <ul>
-        <li><a href="#kinyarwanda-1" class="privacy-link">1. Amakuru Dukusanya</a></li>
-        <li><a href="#kinyarwanda-2" class="privacy-link">2. Uko Dukoresha Amakuru Watanze</a></li>
-        <li><a href="#kinyarwanda-3" class="privacy-link">3. Nta Kubika Amakuru, Nta Kuyasangiza Inyuma</a></li>
-        <li><a href="#kinyarwanda-4" class="privacy-link">4. Imikorere ya Extension</a></li>
-        <li><a href="#kinyarwanda-5" class="privacy-link">5. Ishingiro ry’Amategeko n’Uko Tubahiriza Itegeko</a></li>
-        <li><a href="#kinyarwanda-6" class="privacy-link">6. Umutekano w’Amakuru</a></li>
-        <li><a href="#kinyarwanda-7" class="privacy-link">7. Uburenganzira bwawe nk’Umukoresha</a></li>
-        <li><a href="#kinyarwanda-8" class="privacy-link">8. Aho Wadusanga</a></li>
-      </ul>
-
-      <h3 id="kinyarwanda-1">1. Amakuru Dukusanya</h3>
-      <p>Iyo ukoresha KinyaAI (ku rubuga cyangwa extension ya Chrome), twakira gusa amagambo wohereje ubwawe kugira ngo asuzumwe. Ibi bivuze amagambo:</p>
-      <ul>
-        <li>Wandikiye mu rubuga</li>
-        <li>Wahisemo (highlight) ku urubuga runaka maze ukemeza ko ushatse kuyasuzuma</li>
-      </ul>
-      <p>Nta bindi dukusanya nka:</p>
-      <ul>
-        <li>Amateka y’ibyo wasuye kuri murandasi</li>
-        <li>Indangamuntu cyangwa amazina yawe</li>
-        <li>Amakuru atagaragajwe n’umukoresha ubwe</li>
-      </ul>
-
-      <h3 id="kinyarwanda-2">2. Uko Dukoresha Amakuru Watanze</h3>
-      <p>Amagambo wohereje akoreshwa gusa mu kuyasuzuma hakoreshejwe ubwenge bw’ubukorano (machine learning) bugamije kureba niba arimo urwango cyangwa amagambo ashobora kubangamira abandi.</p>
-      <p>Ibi bikorwa bikorwa mu buryo bwa <em>zero-knowledge architecture</em>, aho:</p>
-      <ul>
-        <li>Amagambo wohereje yoherezwa mu buryo bwizewe hakoreshejwe HTTPS</li>
-        <li>Asuzumwa ako kanya mu bubiko bw’igihe gito (memory)</li>
-        <li>Igihe ibisubizo bimaze gutangwa, ayo magambo ahita asibwa ako kanya.</li>
-      </ul>
-
-      <h3 id="kinyarwanda-3">3. Nta Kubika Amakuru, Nta Kuyasangiza Inyuma</h3>
-      <p>Nta makuru bwite abikwa atari ayo ukeneye gusa ngo konti yawe ikore (nko email n’ijambo ry’ibanga igihe wiyandikishije). Nta na rimwe dusangira cyangwa tugurisha amakuru yawe ku bandi bantu cyangwa ibigo byo hanze.</p>
-      <p>Niba ukoresha konti, amateka y’icyo wasabye gusesengurwa abikwa kuri wowe gusa, kandi ushobora kuyasibanganya igihe icyo ari cyo cyose ukoresheje Dashboard yawe.</p>
-
-      <h3 id="kinyarwanda-4">4. Imikorere ya Extension</h3>
-      <p>Extension ya KinyaAI kuri Chrome ikora gusa iyo:</p>
-      <ul>
-        <li>Wahisemo amagambo (highlight)</li>
-        <li>Wemeje gusuzuma ukoresheje buto yabigenewe</li>
-      </ul>
-      <p>Ntishobora gusesengura urupapuro rwose cyangwa gukurikirana ibikorwa byawe mu buryo bwikora. Iyi mikorere yubahiriza Amabwiriza ya Chrome Web Store.</p>
-
-      <h3 id="kinyarwanda-5">5. Ishingiro ry’Amategeko n’Uko Tubahiriza Itegeko</h3>
-      <p>KinyaAI yubahiriza:</p>
-      <ul>
-        <li>Itegeko No. 058/2021 rigenga uburinzi bw’amakuru bwite mu Rwanda</li>
-        <li>Itegeko rya GDPR, Ingingo ya 2(2)(c), ryemerera gusesengura amakuru yoherejwe n’umukoresha ubwe, adakeneweho uruhushya rwihariye</li>
-        <li>IEEE Ethically Aligned Design na W3C Ethical Web Principles byibanda ku bwisanzure bw’umukoresha n’icyubahiro cye</li>
-      </ul>
-
-      <h3 id="kinyarwanda-6">6. Umutekano w’Amakuru</h3>
-      <p>Itumanaho riri hagati y’urubuga cyangwa extension na server yacu rikoreshwa mu buryo bwizewe, hakoreshejwe uburinzi bwa HTTPS. Nta tracking, cookies, cyangwa ibikoresho by’ubusesenguzi (analytics tools) dukoresha.</p>
-      <p>Konti z’abakoresha zirinzwe hakoreshejwe uburyo buhamye bwo kubika amagambo y’ibanga no kwinjira mu buryo butekanye.</p>
-
-      <h3 id="kinyarwanda-7">7. Uburenganzira bwawe nk’Umukoresha</h3>
-      <p>Wemerewe:</p>
-      <ul>
-        <li>Kugenzura amakuru dufite akwerekeyeho</li>
-        <li>Gusaba ko konti yawe cyangwa amakuru ayibitseho asibanganywa</li>
-        <li>Gusubika uruhushya rwo gukoresha amakuru yawe cyangwa gusaba ibisobanuro birambuye</li>
-      </ul>
-      <p>Ushobora kwandikira itsinda ryacu ry’uburinzi bw’amakuru igihe cyose ukoresheje aderesi yanditse hepfo.</p>
-
-      <h3 id="kinyarwanda-8">8. Aho Wadusanga</h3>
-      <p>Niba ufite ikibazo cyangwa ushaka ibisobanuro ku bijyanye n’iyi byavugiwe hejuru, twandikire kuri:</p>
-      <p>📧 <a href="mailto:p.umutoniwa@alustudent.com" class="privacy-link">p.umutoniwa@alustudent.com</a><br>📍 Kigali, Rwanda</p>
-    </div>
-
-    <div class="content-box">
-      <h2>ENGLISH VERSION</h2>
-      <p><strong>Effective Date:</strong> July 13, 2025<br><strong>Last Updated:</strong> July 25, 2025</p>
-      <p>Welcome to KinyaAI, a platform designed to detect hate speech in Kinyarwanda text and contribute to safer digital communities in Rwanda. This Privacy Policy explains how we collect, process, and protect the data you provide when using our services.</p>
-      
-      <h3>Table of Contents</h3>
-      <ul>
-        <li><a href="#english-1" class="privacy-link">1. What We Collect</a></li>
-        <li><a href="#english-2" class="privacy-link">2. How We Use Your Data</a></li>
-        <li><a href="#english-3" class="privacy-link">3. No Storage, No Sharing</a></li>
-        <li><a href="#english-4" class="privacy-link">4. Extension Permissions and Behavior</a></li>
-        <li><a href="#english-5" class="privacy-link">5. Legal Basis & Compliance</a></li>
-        <li><a href="#english-6" class="privacy-link">6. Security Practices</a></li>
-        <li><a href="#english-7" class="privacy-link">7. Your Rights</a></li>
-        <li><a href="#english-8" class="privacy-link">8. Contact Information</a></li>
-      </ul>
-
-      <h3 id="english-1">1. What We Collect</h3>
-      <p>When you use KinyaAI (website or browser extension), we collect only the text you explicitly input or highlight for analysis. This includes:</p>
-      <ul>
-        <li>Text you type into the input field on our site</li>
-        <li>Text you highlight via the browser extension and choose to analyze</li>
-      </ul>
-      <p>We do not collect:</p>
-      <ul>
-        <li>Your browsing history</li>
-        <li>Your personal identity</li>
-        <li>Any hidden or background data from other sites</li>
-      </ul>
-
-      <h3 id="english-2">2. How We Use Your Data</h3>
-      <p>Your input is processed solely to detect potential hate speech using a machine learning model. The classification helps users understand whether the text may be harmful or offensive.</p>
-      <p>All processing is performed under a <em>zero-knowledge architecture</em>:</p>
-      <ul>
-        <li>Input text is sent securely to our backend via HTTPS.</li>
-        <li>It is processed instantly in memory.</li>
-      </ul>
-
-      <h3 id="english-3">3. No Storage, No Sharing</h3>
-      <p>We do not store personal information beyond what is necessary for basic account functionality (e.g., email and password if you sign up). We never sell or share user data with third parties, advertisers, or external platforms.</p>
-      <p>Your classification history (if saved at all) is only visible to you and can be deleted at any time via your user dashboard.</p>
-
-      <h3 id="english-4">4. Extension Permissions and Behavior</h3>
-      <p>The KinyaAI Chrome Extension only activates when:</p>
-      <ul>
-        <li>You manually highlight text</li>
-        <li>You click the "Analyze with KinyaAI" button</li>
-      </ul>
-      <p>It does not scan entire pages, run in the background, or access other page content without your explicit action. This behavior complies with the Chrome Web Store Developer Program Policies.</p>
-
-      <h3 id="english-5">5. Legal Basis & Compliance</h3>
-      <p>KinyaAI complies with:</p>
-      <ul>
-        <li>Rwanda’s Law No. 058/2021 on the Protection of Personal Data and Privacy</li>
-        <li>General Data Protection Regulation (GDPR), Article 2(2)(c), which exempts purely local, user-triggered data processing from consent obligations</li>
-        <li>IEEE Ethically Aligned Design and W3C Ethical Web Principles, prioritizing user agency, consent, and privacy</li>
-      </ul>
-
-      <h3 id="english-6">6. Security Practices</h3>
-      <p>All communication between your browser and our backend is encrypted using industry-standard HTTPS. No third-party trackers, cookies, or analytics tools are used.</p>
-      <p>User accounts (if applicable) are protected with hashed passwords and secure login protocols.</p>
-
-      <h3 id="english-7">7. Your Rights</h3>
-      <p>As a user, you have the right to:</p>
-      <ul>
-        <li>Access and review any data we store about your account</li>
-        <li>Delete your account or any stored classification history</li>
-        <li>Revoke consent or request more information at any time</li>
-      </ul>
-      <p>To exercise these rights, please contact us via the support email listed below.</p>
-
-      <h3 id="english-8">8. Contact Information</h3>
-      <p>If you have questions about this Privacy Policy or your data rights, you can contact us at:</p>
-      <p>📧 <a href="mailto:p.umutoniwa@alustudent.com" class="privacy-link">p.umutoniwa@alustudent.com</a><br>📍 Kigali, Rwanda</p>
-    </div>
-  </section>
-
-  <section class="cta-section container">
-    <h2>Ready to Experience Secure Moderation?</h2>
-    <p>Join thousands of users who trust KinyaAI for culturally-aware, privacy-first content moderation.</p>
-    <a href="{{ url_for('register') }}" class="btn btn-primary">Get Started</a>
-  </section>
-
-  <footer>
-    <p>KinyaAI - Building bridges through intelligent moderation</p>
-    <p>© 2025 All rights reserved | Contact: <a href="mailto:p.umutoniwa@alustudent.com" class="privacy-link">p.umutoniwa@alustudent.com</a></p>
-  </footer>
-
-  <script>
-    // Mobile menu toggle
-    const menuToggle = document.querySelector('.menu-toggle');
-    const mobileMenu = document.querySelector('.mobile-menu');
-    menuToggle.addEventListener('click', () => {
-      mobileMenu.style.display = mobileMenu.style.display === 'flex' ? 'none' : 'flex';
-    });
-
-    // Scroll animation
-    const fadeIns = document.querySelectorAll('.fade-in');
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-        }
-      });
-    }, { threshold: 0.1 });
-
-    fadeIns.forEach(element => observer.observe(element));
-  </script>
+            elements.forEach(el => observer.observe(el));
+        });
+    </script>
 </body>
 </html>

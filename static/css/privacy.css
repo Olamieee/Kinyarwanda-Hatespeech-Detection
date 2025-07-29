@@ -251,11 +251,51 @@ nav {
   z-index: 1;
 }
 
+.content-box h3 {
+  font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+  margin: 1.5rem 0 1rem;
+  color: #e5e7eb;
+}
+
 .content-box p {
   color: #9ca3af;
   line-height: 1.7;
   position: relative;
   z-index: 1;
+}
+
+.content-box ul, .content-box ol {
+  margin: 1rem 0;
+  padding-left: 2rem;
+}
+
+.content-box li {
+  margin-bottom: 0.5rem;
+}
+
+.toc {
+  font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+  margin: 1.5rem 0 1rem;
+  color: #e5e7eb;
+}
+
+.toc + ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+}
+
+.toc + ol li {
+  margin-bottom: 0.75rem;
+}
+
+.toc + ol li a {
+  color: #4ecdc4;
+  text-decoration: none;
+}
+
+.toc + ol li a:hover {
+  color: #ff6b6b;
+  text-decoration: underline;
 }
 
 .privacy-link {
@@ -431,6 +471,22 @@ footer p:first-child {
   
   .menu-toggle {
     display: flex;
+  }
+
+  .content-box {
+    padding: 1.5rem;
+  }
+
+  .privacy-hero {
+    padding: 4rem 1rem 2rem;
+  }
+
+  .hero-content h1 {
+    font-size: clamp(2rem, 6vw, 4rem);
+  }
+
+  .cta-section {
+    padding: 3rem 1rem;
   }
 }
 
